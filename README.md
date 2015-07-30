@@ -1,2 +1,0 @@
-# mist
-Creo Mundi | Mist
