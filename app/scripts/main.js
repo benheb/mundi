@@ -5,12 +5,23 @@
   var App = function App( options ) {
     var self = this;
 
+    $( document ).ajaxStart(function() {
+      NProgress.start();
+    });
+
+    $( document ).ajaxStop(function() {
+      NProgress.done();
+    });
+
     //HACKY AUTH STUFF!!!
     /*
     * GITHUB LOGIN LOGIC 
     *
     */
     this.github = null;
+    this.gistUrl = 'https://gist.github.com/';
+    this.blocksUrl = 'http://bl.ocks.org/';
+
     var token = localStorage.getItem('github');
     console.log('token', token);
 
@@ -20,8 +31,9 @@
         token: token,
         auth: "oauth"
       });
-      $.getJSON('https://api.github.com/user?access_token=828499f8ec9679f2acf0d16fe833a66abb9f605e', function(user) {
+      $.getJSON('https://api.github.com/user?access_token='+token, function(user) {
         $('#login').html('Hello, '+user.login).attr('href', '#');
+        self.user = user.login;
       });
     } else {
       var qs = this.getQueryString();
@@ -33,8 +45,9 @@
           console.log('Token CREATED: ', data);
           localStorage.setItem('github', data.token); //save token 
           
-          $.getJSON('https://api.github.com/user?access_token=828499f8ec9679f2acf0d16fe833a66abb9f605e', function(user) {
+          $.getJSON('https://api.github.com/user?access_token='+data.token, function(user) {
             $('#login').html('Hello, '+user.login).attr('href', '#');
+            self.user = user.login;
           });
 
           self.github = new Github({
@@ -42,7 +55,19 @@
             auth: "oauth"
           });
 
+          delete qs.code; 
+          qs = self.setQueryString(qs);
+          window.history.pushState('', '', '?' + qs);
+
         });
+      } else {
+        //still create a github instance, but can't save 
+        if ( qs.edit ) { 
+          delete qs.edit;
+          qs = self.setQueryString(qs);
+          window.history.pushState('', '', '?' + qs);          
+        }
+        self.github = new Github({});        
       }
     }
     /*
@@ -56,14 +81,14 @@
     //this.id = (location.hash) ? location.hash.replace(/#/, '') : null;
     this.layers = [];
     this.extent = [[-115.85, -38.82],[119.25, 52.58]];
-    this.snippet = 'This is a new map';
+    this.snippet = 'Example Webmap';
     this.title = 'New Map';
     this.webmap = {};
 
     this.defaultWebMap = {};
     this.defaultWebMap.item = {
       "title": this.title,
-      "snippet": this.snippit,
+      "snippet": this.snippet,
       "extent": this.extent
     };
     this.defaultWebMap.itemData = {
@@ -110,24 +135,24 @@
     //user exists, try to load save map 
     if ( this.github ) {
       var qs = this.getQueryString();
-      this.gistId = qs.gistId || null;
-      this.mapId = qs.mapId || this.guid; 
+      var gistId = qs.gistId || null;
+      var mapId = qs.mapId || this.guid; 
       
-      if ( this.gistId && this.mapId ) {
+      if ( gistId && mapId ) {
+        //console.log('here', gistId, mapId);
         //saved map! load it 
-        gist = this.github.getGist( this.gistId );
+        gist = this.github.getGist( gistId );
         gist.read(function(err, gist) {
           
           _.each(gist.files, function(file) {
-            if ( file.filename === self.mapId ) {
+            if ( file.filename === mapId ) {
               json = JSON.parse(file.content);
             }
           });
-          
+          console.log('json', json);
           if ( json ) {
             self.webmap = json;
             self._layersFromWebMapJson();
-            $('#save-text').html('Save Gist');
           } else {
             self.webmap = self.defaultWebMap;
           }
@@ -158,6 +183,10 @@
   App.prototype._initMap = function() {
     var self = this;
 
+    //update gist url 
+    this._updateGistUrl();
+    this._updateBlocksUrl();
+    
     require([
       "esri/map",
       "esri/urlUtils",
@@ -182,13 +211,20 @@
       //end hack 
 
       //create the map
+      self.map;
       arcgisUtils.createMap(self.webmap, "map", {
         mapOptions: {
           minZoom: 2
         }
       }).then(function(response){
         self.map = response.map;
-
+        self.map.graphicsLayerIds.forEach(function(layer) {
+          var layer = self.map.getLayer(layer);
+          layer.setMinScale(0);
+          layer.setMaxScale(0);
+          layer.redraw();
+          self.snippet = layer.name;
+        });
         self.map.on('extent-change', function() {
           self._updateExtent();
         });
@@ -231,6 +267,8 @@
       mode:1, 
       title: layer.name,
       id: layer.id,
+      minScale: 0, 
+      maxScale: 0,
       layerDefinition: {
         drawingInfo: {
           renderer: {}
@@ -241,6 +279,8 @@
     layer.on('load', function() {
       layer.minScale = 0; 
       layer.maxScale = 0;
+
+      self.snippet = layer.name;
 
       console.log('layer loaded!', layer);
       switch(layer.geometryType) {
@@ -274,6 +314,7 @@
       layer.redraw();
 
       self._updateLayers(service, rend);
+      self.save();
 
       $.getJSON('http://opendata.arcgis.com/datasets/' + id + '.json', function(res) {
         var fields = res.data.fields;
@@ -309,6 +350,7 @@
           layer.redraw();
 
           self._updateLayers(service, rend);
+          self.save();
         });
       });
 
@@ -360,6 +402,7 @@
   App.prototype._updateExtent = function() {
     var extent = this.map.geographicExtent;
     this.extent = [[extent.xmin, extent.ymin],[extent.xmax, extent.ymax]];
+    this.save();
   }
 
 
@@ -429,48 +472,61 @@
     //get file id from location.search 
     //TODO remove hash!
     var qs = this.getQueryString();
-    this.gistId = qs.gistId || null;
-    this.mapId = qs.mapId || this.guid(); 
+    var gistId = qs.gistId || null;
+    var mapId = qs.mapId || this.guid(); 
 
     //ui diddy 
     $('#save-text').html('Saving...');
     
-    console.log('saving...', obj);
-    //localStorage.setItem(this.id, JSON.stringify(obj));
-
+    //console.log('saving...', obj);
     var data = {
       "description": this.snippet,
       "public": true,
       "files": {}
     }
 
-    data.files[this.mapId] = {
+    data.files[ mapId ] = {
       "content": JSON.stringify(obj)
     }
 
-    if ( !this.gistId ) {
+
+    if ( !gistId ) {
       //create NEW gist 
       var gist = this.github.getGist();
       gist.create(data, function(err, g) {
-        //get gist id
-        //get file id
-        //update location.search! 
-        qs.mapId = self.mapId; 
+        console.log('gist', g);
+        
+        qs.mapId = mapId; 
         qs.gistId = g.id;
         qs = self.setQueryString(qs);
-        console.log('qs', qs);
         window.history.pushState('', '', '?' + qs);
-        $('#save-text').html('Save Gist');
+        
+        self._onSaveComplete();
+        self._updateGistUrl();
+        self._updateBlocksUrl();
       });
       
     } else {
       //just update the file! 
-      var gist = this.github.getGist(this.gistId);
+      var gist = this.github.getGist(gistId);
+      data.files['index.html'] = {
+        "content": this._getTemplate( gistId )
+      }
+
       gist.update(data, function(err, d) {
-        $('#save-text').html('Save Gist');
+        self._onSaveComplete();
+        self._updateGistUrl();
+        self._updateBlocksUrl();
       });
     }
   
+  }
+
+
+
+
+  App.prototype._onSaveComplete = function() {
+    $('#save-text').html('Save');
   }
 
 
@@ -638,6 +694,77 @@
       }
     };
   }
+
+
+
+
+  App.prototype._updateGistUrl = function() {
+    var self = this;
+    var qs = this.getQueryString();
+    var gistId = qs.gistId;
+    if ( self.user && gistId ) {
+      $('#footer-urls').show();
+      $('#gist-url').show().attr('href', self.gistUrl + self.user + '/' + gistId).html(self.gistUrl + self.user + '/' + gistId);
+    } else {
+      $('#footer-urls').hide();
+    }
+  }
+
+
+  App.prototype._updateBlocksUrl = function() {
+    var self = this;
+    var qs = this.getQueryString();
+    var gistId = qs.gistId;
+    if ( self.user && gistId ) {
+      $('#footer-urls').show();
+      $('#blocks-url').attr('href', self.blocksUrl + self.user + '/' + gistId).html(self.blocksUrl + self.user + '/' + gistId);
+    } else {
+      $('#footer-urls').hide();
+    }
+  }
+
+
+  App.prototype._getTemplate = function(id) {
+    var tmpl = '<!DOCTYPE html>\
+      <meta charset="utf-8">\
+      <link rel="stylesheet" href="http://js.arcgis.com/3.14/esri/css/esri.css">\
+      <style>\
+        #map {\
+          height:500px;\
+        }\
+      </style>\
+      <body>\
+      <div id="map"></div>\
+      <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>\
+      <script src="//code.jquery.com/jquery-migrate-1.2.1.min.js"></script>\
+      <script src="http://js.arcgis.com/3.14/"></script>\
+      <script>\
+      require(["esri/map","esri/urlUtils","esri/arcgis/utils","esri/layers/FeatureLayer","esri/renderers/SimpleRenderer","esri/renderers/jsonUtils","dojo/domReady!"],\
+        function(Map,urlUtils,arcgisUtils,FeatureLayer,SimpleRenderer,jsonUtils) {\
+        $.getJSON("https://api.github.com/gists/'+id+'", function(data) {\
+          var webmap;\
+          for (var file in data.files ) {\
+            if ( file !== "index.html" ) {\
+              webmap = JSON.parse(data.files[file].content);\
+            }\
+          };\
+          arcgisUtils.createMap(webmap, "map").then(function(response){\
+            var map = response.map;\
+            map.graphicsLayerIds.forEach(function(layer) {\
+              var layer = map.getLayer(layer);\
+              layer.setMinScale(0);\
+              layer.setMaxScale(0);\
+              layer.redraw();\
+            });\
+          });\
+        });\
+      });\
+      </script>\
+      </body>';
+
+    return tmpl;
+
+  };
 
 
 

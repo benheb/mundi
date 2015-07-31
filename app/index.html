@@ -11,6 +11,7 @@
 
     <!-- build:css styles/vendor.css -->
     <!-- bower:css -->
+    <link rel="stylesheet" href="/bower_components/nprogress/nprogress.css" />
     <!-- endbower -->
     <!-- endbuild -->
 
@@ -45,10 +46,10 @@
     </nav>
 
     <div id="toolbar">
-      <div id="save-map" class="tool"><i class="glyphicon glyphicon-floppy-save"></i> <span id="save-text">Create Gist</span></div>
-      <div id="clear-layers" class="tool"><i class="glyphicon glyphicon-fire"></i> Clear Layers</div>
+      <div id="save-map" class="tool"><i class="glyphicon glyphicon-floppy-save"></i> <span id="save-text">Save</span></div>
+      <div id="clear-layers" class="tool"><i class="glyphicon glyphicon-fire"></i> Clear </div>
       <!-- <div id="style-map" class="tool disabled"><i class="glyphicon glyphicon-pencil"></i> Styler</div> -->
-      <div id="add-data" class="tool"><i class="glyphicon glyphicon-search"></i> Add Data</div>
+      <div id="add-data" class="tool"><i class="glyphicon glyphicon-search"></i> Add</div>
     </div>
 
     <div id="map-region">
@@ -60,6 +61,10 @@
 
     <div class="footer">
       <p>With ♥ from me to you</p>
+      <div id="footer-urls">
+        <span>Gist: </span><a id="gist-url" href="#" target="_blank"></a>
+        <span>bl.ocks: </span><a id="blocks-url" href="#" target="_blank"></a>
+      </div>
     </div>
     
     <!-- Google Analytics: change UA-XXXXX-X to be your site's ID. -->
@@ -75,7 +80,8 @@
     <!-- build:js scripts/vendor.js -->
     <!-- bower:js -->
     <script src="/bower_components/jquery/dist/jquery.js"></script>
-    <!--<script src="/bower_components/underscore/underscore.js"></script>-->
+    <script src="/bower_components/underscore/underscore.js"></script>
+    <script src="/bower_components/nprogress/nprogress.js"></script>
     <!-- endbower -->
     <!-- endbuild -->
     
@@ -97,7 +103,6 @@
     <script src="http://js.arcgis.com/3.14/"></script>
     <script src="https://rawgit.com/benheb/open-search/master/open-search.js"></script>
     <script src="https://rawgit.com/benheb/malette/gh-pages/malette/malette.js"></script>
-    <script src="http://dglittle.github.io/gl519/index.js"></script>
 
     <!-- build:js scripts/main.js -->
     <script src="scripts/github.js"></script>

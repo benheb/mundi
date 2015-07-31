@@ -89,6 +89,24 @@ body > #map-region {
   }
 }
 
+
+#nprogress .bar {
+  //background: #fa9581;
+  background: #fff;
+}
+
+#nprogress .spinner-icon {
+  //border-top-color: #fa9581;
+  //border-left-color: #fa9581;
+  border-top-color: #fff;
+  border-left-color: #fff;
+}
+
+#nprogress .peg {
+  box-shadow: 0 0 10px #FFF, 0 0 5px #FFF;
+}
+
+
 /* Custom page footer */
 .footer {
   position: absolute;
@@ -102,6 +120,15 @@ body > #map-region {
   color:#777;
   font-family: Varela,sans-serif;
   font-size:0.9em;
+  #footer-urls {
+    float: right;
+    display: none;
+    margin: 5px;
+    margin-left: 15px;
+    width: 800px;
+    margin-top: -28px;
+    text-align: right;
+  }
 }
 
 #map-region {
