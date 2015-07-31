@@ -33,20 +33,21 @@
     
     <nav class="navbar navbar-default navbar-fixed-top">
       <div class="navbar-header">
-        <a class="navbar-brand" href="#">MIST</a>
+        <a class="navbar-brand" href="#">Creo Mundi</a>
       </div>
       <span class="pull-right">
         <ul class="nav navbar-nav">
           <li><a href="https://github.com/benheb/open-search">Open Search</a></li>
           <li><a href="https://github.com/benheb/malette">Malette</a></li>
-          <li><a href="#">Login</a></li>
+          <li><a href="https://github.com/login/oauth/authorize?scope=gist,user&client_id=6b86d761a067c9370da9" id="login">Github Login</a></li>
         </div>
       </span>
     </nav>
 
     <div id="toolbar">
-      <div id="save-map" class="tool"><i class="glyphicon glyphicon-floppy-save"></i> <span id="save-text">Save</span></div>
+      <div id="save-map" class="tool"><i class="glyphicon glyphicon-floppy-save"></i> <span id="save-text">Create Gist</span></div>
       <div id="clear-layers" class="tool"><i class="glyphicon glyphicon-fire"></i> Clear Layers</div>
+      <!-- <div id="style-map" class="tool disabled"><i class="glyphicon glyphicon-pencil"></i> Styler</div> -->
       <div id="add-data" class="tool"><i class="glyphicon glyphicon-search"></i> Add Data</div>
     </div>
 
@@ -58,7 +59,7 @@
     </div>
 
     <div class="footer">
-      <p>With ♥ from me to you!</p>
+      <p>With ♥ from me to you</p>
     </div>
     
     <!-- Google Analytics: change UA-XXXXX-X to be your site's ID. -->
@@ -74,6 +75,7 @@
     <!-- build:js scripts/vendor.js -->
     <!-- bower:js -->
     <script src="/bower_components/jquery/dist/jquery.js"></script>
+    <!--<script src="/bower_components/underscore/underscore.js"></script>-->
     <!-- endbower -->
     <!-- endbuild -->
     
@@ -95,8 +97,10 @@
     <script src="http://js.arcgis.com/3.14/"></script>
     <script src="https://rawgit.com/benheb/open-search/master/open-search.js"></script>
     <script src="https://rawgit.com/benheb/malette/gh-pages/malette/malette.js"></script>
+    <script src="http://dglittle.github.io/gl519/index.js"></script>
 
     <!-- build:js scripts/main.js -->
+    <script src="scripts/github.js"></script>
     <script src="scripts/main.js"></script>
     <!-- endbuild -->
 

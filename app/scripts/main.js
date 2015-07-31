@@ -5,7 +5,55 @@
   var App = function App( options ) {
     var self = this;
 
+    //HACKY AUTH STUFF!!!
+    /*
+    * GITHUB LOGIN LOGIC 
+    *
+    */
+    this.github = null;
+    var token = localStorage.getItem('github');
+    console.log('token', token);
+
+    if ( token ) {
+      console.log('token already exists!');
+      this.github = new Github({
+        token: token,
+        auth: "oauth"
+      });
+      $.getJSON('https://api.github.com/user?access_token=828499f8ec9679f2acf0d16fe833a66abb9f605e', function(user) {
+        $('#login').html('Hello, '+user.login).attr('href', '#');
+      });
+    } else {
+      var qs = this.getQueryString();
+      if ( qs.code ) {
+        console.log('code:', qs.code);
+        var code = qs.code;
+        $.getJSON('https://whispering-stream-9425.herokuapp.com/authenticate/'+code, function(data) {
+          
+          console.log('Token CREATED: ', data);
+          localStorage.setItem('github', data.token); //save token 
+          
+          $.getJSON('https://api.github.com/user?access_token=828499f8ec9679f2acf0d16fe833a66abb9f605e', function(user) {
+            $('#login').html('Hello, '+user.login).attr('href', '#');
+          });
+
+          self.github = new Github({
+            token: data.token,
+            auth: "oauth"
+          });
+
+        });
+      }
+    }
+    /*
+    * END THE LOGIN LOGIC
+    *
+    */
+
+
+    //set the stage
     this.map = null;
+    //this.id = (location.hash) ? location.hash.replace(/#/, '') : null;
     this.layers = [];
     this.extent = [[-115.85, -38.82],[119.25, 52.58]];
     this.snippet = 'This is a new map';
@@ -35,34 +83,78 @@
       "version": "1.0"
     };
 
-    this.getWebMap();
-    this._setDefaultRenderers();
-    this._initMap();
-    this._wire();
-
+    this.getWebMap(function() {
+      self._setDefaultRenderers();
+      self._initMap();
+      self._wire();
+    });
+  
     var search = new OpenSearch('search-container', {});
 
   };
 
 
 
-  App.prototype.getWebMap = function() {
-    var json = localStorage.getItem('webMapJson');
-    console.log('LOAD JSON:', JSON.parse(json));
 
-    if ( json ) {
-      this.webmap = JSON.parse(json);
-      this._layersFromWebMapJson();
+  /*
+  * Get webmap!
+  * IF gist and gist file, load webmap from gist
+  * if !github, load default webamp (blank map)
+  *
+  */
+  App.prototype.getWebMap = function(callback) {
+    var self = this;
+
+    var json, gist;
+    
+    //user exists, try to load save map 
+    if ( this.github ) {
+      var qs = this.getQueryString();
+      this.gistId = qs.gistId || null;
+      this.mapId = qs.mapId || this.guid; 
+      
+      if ( this.gistId && this.mapId ) {
+        //saved map! load it 
+        gist = this.github.getGist( this.gistId );
+        gist.read(function(err, gist) {
+          
+          _.each(gist.files, function(file) {
+            if ( file.filename === self.mapId ) {
+              json = JSON.parse(file.content);
+            }
+          });
+          
+          if ( json ) {
+            self.webmap = json;
+            self._layersFromWebMapJson();
+            $('#save-text').html('Save Gist');
+          } else {
+            self.webmap = self.defaultWebMap;
+          }
+
+          callback();
+        });
+      } else {
+        //no saved map! load default 
+        self.webmap = self.defaultWebMap;
+        callback(); 
+      }
     } else {
-      this.webmap = this.defaultWebMap;
-      console.log('this.webmap.extent', this.webmap.extent);
+      //load default map, no user logged in 
+      self.webmap = self.defaultWebMap;
+      callback(); 
     }
-
-    window.webmap = this.webmap;
+  
   }
 
 
 
+
+  /*
+  * Creates the actual map 
+  * Requires this.webmap be defined
+  * Also save some dojo hacky stuff for use elsewhere... heh 
+  */ 
   App.prototype._initMap = function() {
     var self = this;
 
@@ -83,10 +175,13 @@
       jsonUtils
     ) { 
 
+      //HACK! I want to use these elsewhere OUTSIDE of require, so saving them to App 
       self.FeatureLayer = FeatureLayer;
       self.SimpleRenderer = SimpleRenderer;
       self.jsonUtils = jsonUtils;
+      //end hack 
 
+      //create the map
       arcgisUtils.createMap(self.webmap, "map", {
         mapOptions: {
           minZoom: 2
@@ -106,7 +201,13 @@
 
 
 
-
+  /*
+  * Add layer to map 
+  * @param {string}     service URL 
+  * @param {string}     item id 
+  *
+  *
+  */
   App.prototype.addLayerToMap = function(service,id) {
     var self = this;
     var type;
@@ -217,6 +318,11 @@
 
 
 
+  /*
+  * build layers array from saved webmap json 
+  *
+  *
+  */
   App.prototype._layersFromWebMapJson = function() {
     
     var self = this;
@@ -275,6 +381,12 @@
 
 
 
+
+  /*
+  * Build the webmap json! 
+  * 
+  *
+  */
   App.prototype._buildWebMapJson = function() {
     
     var json = {};
@@ -302,23 +414,78 @@
 
 
 
+  /*
+  * Saves the webmap json
+  * Saves to localstorage 
+  * Saves to github if it can! 
+  *
+  */ 
   App.prototype.save = function() {
+    var self = this;
     var obj = this._buildWebMapJson();
+
+
+    //get gist id from location.search
+    //get file id from location.search 
+    //TODO remove hash!
+    var qs = this.getQueryString();
+    this.gistId = qs.gistId || null;
+    this.mapId = qs.mapId || this.guid(); 
+
+    //ui diddy 
     $('#save-text').html('Saving...');
     
     console.log('saving...', obj);
-    localStorage.setItem('webMapJson', JSON.stringify(obj));
+    //localStorage.setItem(this.id, JSON.stringify(obj));
 
-    setTimeout( function() {
-      $('#save-text').html('Save');
-    },300);
+    var data = {
+      "description": this.snippet,
+      "public": true,
+      "files": {}
+    }
 
+    data.files[this.mapId] = {
+      "content": JSON.stringify(obj)
+    }
+
+    if ( !this.gistId ) {
+      //create NEW gist 
+      var gist = this.github.getGist();
+      gist.create(data, function(err, g) {
+        //get gist id
+        //get file id
+        //update location.search! 
+        qs.mapId = self.mapId; 
+        qs.gistId = g.id;
+        qs = self.setQueryString(qs);
+        console.log('qs', qs);
+        window.history.pushState('', '', '?' + qs);
+        $('#save-text').html('Save Gist');
+      });
+      
+    } else {
+      //just update the file! 
+      var gist = this.github.getGist(this.gistId);
+      gist.update(data, function(err, d) {
+        $('#save-text').html('Save Gist');
+      });
+    }
+  
   }
 
 
 
+
+  /*
+  * Clear all layers from map 
+  *
+  *
+  */
   App.prototype.clearLayers = function() {
     var self = this;
+
+    $('#style-map').addClass('disabled');
+
     if ( this.malette ) { 
       this.malette.destroy(); 
       this.malette = null;
@@ -334,6 +501,46 @@
 
   /****** HELPERS *******/
 
+
+
+
+  /*
+  * Create random GUID 
+  *
+  *
+  */
+  App.prototype.guid = function () {
+    return Math.random().toString(36).substr(2, 9);
+  }
+
+
+
+
+  App.prototype.setQueryString = function(qs) {
+    return $.param(qs);
+  }
+
+
+
+  App.prototype.getQueryString = function() {
+    var pairs = window.location.search.substring(1).split("&"),
+      obj = {},
+      pair,
+      i;
+
+    for ( i in pairs ) {
+      if ( pairs[i] === "" ) continue;
+
+      pair = pairs[i].split("=");
+      obj[ decodeURIComponent( pair[0] ) ] = decodeURIComponent( pair[1] );
+    }
+
+    return obj;
+  }
+
+
+
+  /* projection stuff */
   App.prototype.isWebMercator = function(spatialReference){
     //Esri wkids that are "web mercator"
     var wkids = [102100,102113,3857];
@@ -347,6 +554,13 @@
   }
 
 
+
+
+  /*
+  * Project layer extent geoms 
+  *
+  *
+  */ 
   App.prototype.projectGeometries = function(inSR, outSR, geometryType, geometries){
     //url
     var prjUrl = 'http://utilitydev.arcgisonline.com/arcgis/rest/services/Geometry/GeometryServer/project';
@@ -379,6 +593,7 @@
 
 
 
+  /* default rendereres */
   App.prototype._setDefaultRenderers = function() {
     this.renderers = {
       'point' : {
@@ -426,12 +641,16 @@
 
 
 
-
   /******* WIRE EVENTS *******/ 
 
   App.prototype._wire = function() {
     var self = this;
     console.log('wire me');
+
+    var qs = this.getQueryString();
+    if ( qs.edit === 'true' ) {
+      $('.tool').show();
+    }
 
     $('#clear-layers').on('click', function() {
       self.clearLayers();
@@ -448,6 +667,18 @@
     $('#map').on('dragover', function(e) {
       e.preventDefault();
     });
+
+    if ( this.layers.length ) {
+      $('#style-map').removeClass('disabled');
+    }
+
+    $('#style-map').on('click', function() {
+      if ( $(this).hasClass('disabled') ) {
+        return;
+      } else {
+        self.showMalette();
+      }
+    })
 
     $('#map').on('drop', function(e) {
       var data = e.originalEvent.dataTransfer.getData("text");
