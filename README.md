@@ -8,7 +8,7 @@ Create simple maps with [Malette](https://github.com/benheb/malette) and [Open S
 
 ****
 
-## Front-End application
+## Developers
 
 * Install: `npm install` and `bower install`
 * Run locally: `gulp serve`
