@@ -159,16 +159,15 @@
     if ( this.github ) {
       var qs = this.getQueryString();
       var gistId = qs.gistId || null;
-      var mapId = qs.mapId || this.guid; 
       
-      if ( gistId && mapId ) {
+      if ( gistId ) {
         
         //saved map! load it 
         gist = this.github.getGist( gistId );
         gist.read(function(err, gist) {
           
           _.each(gist.files, function(file) {
-            if ( file.filename === mapId ) {
+            if ( file.filename === 'webmap.json' ) {
               json = JSON.parse(file.content);
             }
           });
@@ -538,7 +537,6 @@
     //end 
 
     var gistId = qs.gistId || null;
-    var mapId = qs.mapId || this.guid(); 
     
     //create data object that gets sent to github 
     var data = {
@@ -548,7 +546,7 @@
     }
 
     //webmap json file 
-    data.files[ mapId ] = {
+    data.files[ 'webmap.json' ] = {
       "content": JSON.stringify(obj, null, '\t')
     }
 
@@ -559,7 +557,6 @@
       gist.create(data, function(err, g) {
         console.log('gist', g);
         
-        qs.mapId = mapId; 
         qs.gistId = g.id;
         qs = self.setQueryString(qs);
         window.history.pushState('', '', '?' + qs);
@@ -832,13 +829,6 @@
 
 
   App.prototype._getTemplate = function(id) {
-    $.ajax({
-      url: '/tmpl.html'
-    })
-    .done(function(html) {
-      //console.log('html', html);
-    });
-
     var tmpl = '<!DOCTYPE html>\
       <meta charset="utf-8">\
       <link rel="stylesheet" href="http://js.arcgis.com/3.14/esri/css/esri.css">\
@@ -883,7 +873,6 @@
       "indent-spaces":2
     }
     tmpl = tidy_html5(tmpl, options);
-    console.log('tmpl', tmpl);
     return tmpl;
 
   };
