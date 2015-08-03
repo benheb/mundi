@@ -47,7 +47,10 @@ body > #map-region {
     color:$header-color !important;
   }
 }
-
+  
+.navbar-brand, #login {
+  text-transform: none;
+}
 
 #toolbar {
   top: 50px;
