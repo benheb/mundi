@@ -158,7 +158,7 @@
     //user exists, try to load save map 
     if ( this.github ) {
       var qs = this.getQueryString();
-      var gistId = qs.gistId || null;
+      var gistId = qs.id || null;
       
       if ( gistId ) {
         
@@ -536,7 +536,7 @@
     if ( !qs.edit || this.layers.length === 0 ) return;
     //end 
 
-    var gistId = qs.gistId || null;
+    var gistId = qs.id || null;
     
     //create data object that gets sent to github 
     var data = {
@@ -557,7 +557,7 @@
       gist.create(data, function(err, g) {
         console.log('gist', g);
         
-        qs.gistId = g.id;
+        qs.id = g.id;
         qs = self.setQueryString(qs);
         window.history.pushState('', '', '?' + qs);
         
@@ -799,7 +799,7 @@
   App.prototype._updateGistUrl = function() {
     var self = this;
     var qs = this.getQueryString();
-    var gistId = qs.gistId;
+    var gistId = qs.id;
     if ( self.user && gistId ) {
       $('#footer-urls').show();
       $('#gist-url').show().attr('href', self.gistUrl + self.user + '/' + gistId).html(self.gistUrl + self.user + '/' + gistId);
@@ -818,7 +818,7 @@
   App.prototype._updateBlocksUrl = function() {
     var self = this;
     var qs = this.getQueryString();
-    var gistId = qs.gistId;
+    var gistId = qs.id;
     if ( self.user && gistId ) {
       $('#footer-urls').show();
       $('#blocks-url').attr('href', self.blocksUrl + self.user + '/' + gistId).html(self.blocksUrl + self.user + '/' + gistId);
