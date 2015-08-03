@@ -836,9 +836,14 @@
         #map {\
           height:500px;\
         }\
+        #mundi-link {\
+          position: absolute;\
+          right: 5px;\
+          z-index: 200;\
+        }\
       </style>\
       <body>\
-      <div id="map"></div>\
+      <div id="map"><a id="mundi-link" href="http://benheb.github.io/mundi/?id='+id+'">View map in Mundi</a></div>\
       <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>\
       <script src="//code.jquery.com/jquery-migrate-1.2.1.min.js"></script>\
       <script src="http://js.arcgis.com/3.14/"></script>\
