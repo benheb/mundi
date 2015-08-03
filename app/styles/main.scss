@@ -1,6 +1,6 @@
 $icon-font-path: '../fonts/';
 
-$primary-color:#779ECB;
+$primary-color: #57616D;
 $second-color:#eaeaea;
 $header-color: #FFF;
 $third-color: rgba(219, 218, 214, 0.1);
@@ -87,6 +87,22 @@ body > #map-region {
       }
     }
   }
+  #edit, #new {
+    display: none;
+    float: right;
+    margin: 5px;
+    margin-right: 0px;
+    font-size: 0.8em;
+    border: 1px solid #CCC;
+    padding: 4px;
+    border-radius: 3px;
+    padding-top: 5px;
+    background:#f3f3f3;
+    &:hover {
+      cursor:pointer;
+      background:#EAEAEA;
+    }
+  }
 }
 
 
@@ -117,7 +133,7 @@ body > #map-region {
   background:#FDFDFD;
   height:30px;
   padding-top:7px;
-  color:#777;
+  color:#999;
   font-family: Varela,sans-serif;
   font-size:0.9em;
   #footer-urls {
@@ -156,6 +172,33 @@ body > #map-region {
     width:100%;
     bottom:0;
     pointer-events:none;
+    #basemaps {
+      position: absolute;
+      left: 14px;
+      bottom: 36px;
+      #gray {
+        background: url(../images/mundi-gray.jpg);
+        background-size: contain;
+      }
+      #delorme {
+        background: url(../images/mundi-delorme.jpg);
+        background-size: contain;
+      }
+      .change-basemap {
+        border: 2px solid #FFF;
+        width: 65px;
+        height: 65px;
+        border-radius: 80px;
+        margin-bottom: 5px;
+        pointer-events: auto;
+        float: left;
+        margin-right: 4px;
+        &:hover {
+          cursor:pointer;
+          border:2px solid #999;
+        }
+      }
+    }
   }
   #search-container {
     display: none;

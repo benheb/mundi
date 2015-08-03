@@ -13,6 +13,8 @@
       NProgress.done();
     });
 
+
+
     //HACKY AUTH STUFF!!!
     /*
     * GITHUB LOGIN LOGIC 
@@ -23,10 +25,9 @@
     this.blocksUrl = 'http://bl.ocks.org/';
 
     var token = localStorage.getItem('github');
-    console.log('token', token);
+    var qs = this.getQueryString();
 
     if ( token ) {
-      console.log('token already exists!');
       this.github = new Github({
         token: token,
         auth: "oauth"
@@ -34,11 +35,10 @@
       $.getJSON('https://api.github.com/user?access_token='+token, function(user) {
         $('#login').html('Hello, '+user.login).attr('href', '#');
         self.user = user.login;
+        self._setHeader();
       });
     } else {
-      var qs = this.getQueryString();
       if ( qs.code ) {
-        console.log('code:', qs.code);
         var code = qs.code;
         $.getJSON('https://whispering-stream-9425.herokuapp.com/authenticate/'+code, function(data) {
           
@@ -48,6 +48,7 @@
           $.getJSON('https://api.github.com/user?access_token='+data.token, function(user) {
             $('#login').html('Hello, '+user.login).attr('href', '#');
             self.user = user.login;
+            self._setHeader();
           });
 
           self.github = new Github({
@@ -65,9 +66,9 @@
         if ( qs.edit ) { 
           delete qs.edit;
           qs = self.setQueryString(qs);
-          window.history.pushState('', '', '?' + qs);          
+          window.history.pushState('', '', '?' + qs);
         }
-        self.github = new Github({});        
+        self.github = new Github({});
       }
     }
     /*
@@ -76,15 +77,18 @@
     */
 
 
-    //set the stage
+
+    //set the stage!
+    this._setHeader();
     this.map = null;
-    //this.id = (location.hash) ? location.hash.replace(/#/, '') : null;
     this.layers = [];
+    this.basemapLayers = [];
     this.extent = [[-115.85, -38.82],[119.25, 52.58]];
     this.snippet = 'Example Webmap';
     this.title = 'New Map';
     this.webmap = {};
 
+    //create default webmap 
     this.defaultWebMap = {};
     this.defaultWebMap.item = {
       "title": this.title,
@@ -93,27 +97,35 @@
     };
     this.defaultWebMap.itemData = {
       "baseMap": {
-        "baseMapLayers": [{
-            "opacity": 1,
-            "visibility": true,
+        "baseMapLayers": [
+          {
+            "opacity": 0.8,
+            "visibility": false,
             "url": "http://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Light_Gray_Base/MapServer"
           },
           {
-            "opacity": 0.3,
+            "opacity": 0.5,
             "visibility": true,
-            "url": "http://services.arcgisonline.com/arcgis/rest/services/Elevation/World_Hillshade/MapServer"
+            "url": "http://services.arcgisonline.com/arcgis/rest/services/Specialty/DeLorme_World_Base_Map/MapServer"
           }],
         "title": "basemap"
       },
       "version": "1.0"
     };
 
+    this.basemapUrls = {
+      'delorme': 'http://services.arcgisonline.com/arcgis/rest/services/Specialty/DeLorme_World_Base_Map/MapServer',
+      'gray': 'http://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Light_Gray_Base/MapServer'
+    }
+
+    //get initial webmap 
     this.getWebMap(function() {
       self._setDefaultRenderers();
       self._initMap();
       self._wire();
     });
   
+    //initialize the search module 
     var search = new OpenSearch('search-container', {});
 
   };
@@ -156,17 +168,20 @@
           } else {
             self.webmap = self.defaultWebMap;
           }
+          self._basemapsFromWebMapJson();
 
           callback();
         });
       } else {
         //no saved map! load default 
         self.webmap = self.defaultWebMap;
+        self._basemapsFromWebMapJson();
         callback(); 
       }
     } else {
       //load default map, no user logged in 
       self.webmap = self.defaultWebMap;
+      self._basemapsFromWebMapJson();
       callback(); 
     }
   
@@ -360,6 +375,54 @@
 
 
 
+  App.prototype._changeBasemap = function(id) {
+    var self = this;
+
+    var basemapId = ( id === 'gray' ) ? 'base0' : 'base1';
+    var hide = ( basemapId === 'base0' ) ? 'base1' : 'base0';
+    var b = this.map.getLayer( basemapId );
+    var c = this.map.getLayer( hide );
+    b.setVisibility(true);
+    c.setVisibility();
+
+    this.basemapLayers.forEach(function(basemap) {
+      if ( basemap.url === self.basemapUrls[ id ] )  {
+        basemap.visibility = true;
+      } else {
+        basemap.visibility = false;
+      }
+    });
+    
+    this.save();
+  }
+
+
+
+
+  /*
+  * build layers array from saved webmap json 
+  *
+  *
+  */
+  App.prototype._basemapsFromWebMapJson = function() {
+    
+    var self = this;
+    console.log('this.webmap.itemData', this.webmap.itemData);
+    this.webmap.itemData.baseMap.baseMapLayers.forEach(function(l) {
+      var basemap = {};
+      basemap.opacity = l.opacity;
+      basemap.visibility = l.visibility;
+      basemap.url = l.url;
+      self.basemapLayers.push(basemap);
+    });
+
+    console.log('this.basemapLayers', this.basemapLayers);
+
+  }
+
+
+
+
   /*
   * build layers array from saved webmap json 
   *
@@ -407,22 +470,6 @@
 
 
   
-  //get basemap layers ( for webmap json )
-  App.prototype.getBasemapLayers = function() {
-    var basemaps = [];
-    this.webmap.itemData.baseMap.baseMapLayers.forEach(function(basemap) {
-      var b = {};
-      b.opacity = basemap.opacity;
-      b.visibility = basemap.visibility;
-      b.url = basemap.url;
-      basemaps.push(b);
-    });
-
-    return basemaps;
-  }
-
-
-
 
 
   /*
@@ -433,7 +480,6 @@
   App.prototype._buildWebMapJson = function() {
     
     var json = {};
-    var basemaps = this.getBasemapLayers();
 
     json.item = {
       "title": this.title,
@@ -444,7 +490,7 @@
     json.itemData = {
       "operationalLayers": this.layers,
       "baseMap": {
-        "baseMapLayers": basemaps,
+        "baseMapLayers": this.basemapLayers,
         "title": "basemap"
       },
       "version": "1.0"
@@ -472,6 +518,10 @@
     //get file id from location.search 
     //TODO remove hash!
     var qs = this.getQueryString();
+
+    //if not in edit mode, do not save!
+    if ( !qs.edit || this.layers.length === 0 ) return;
+
     var gistId = qs.gistId || null;
     var mapId = qs.mapId || this.guid(); 
 
@@ -697,6 +747,31 @@
 
 
 
+  App.prototype._setHeader = function() {
+    var qs = this.getQueryString();
+    var token = localStorage.getItem('github');
+
+    console.log('qs.edit', qs.edit);
+    
+    if ( qs.edit === 'true' ) {
+      $('.tool').show();
+    }
+
+    if ( !qs.edit && token ) {
+      $('#new').hide();
+      $('#edit').show();
+    } else {
+      $('#new').hide();
+      $('#edit').hide();
+    }
+
+    if ( qs.edit && token ) {
+      $('#new').show();
+    }
+
+  }
+
+
 
   App.prototype._updateGistUrl = function() {
     var self = this;
@@ -816,6 +891,25 @@
       self.addLayerToMap(service, id);
     });
 
+    $('#edit').on('click', function() {
+      var qs = self.getQueryString();
+      qs.edit = 'true';
+      qs = self.setQueryString(qs);
+      window.history.pushState('', '', '?' + qs);
+      self._setHeader();
+    });
+
+    $('#new').on('click', function() {
+      var qs = self.setQueryString({'edit': true});
+      window.history.pushState('', '', '?' + qs);
+      location.reload();
+    });
+
+
+    $('.change-basemap').on('click', function(e) {
+      var id = $(this).attr('id');
+      self._changeBasemap(id);
+    });
   }
 
   window.App = App;

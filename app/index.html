@@ -46,21 +46,27 @@
     </nav>
 
     <div id="toolbar">
+      <div id="edit"><i class="glyphicon glyphicon-edit"></i> Edit</div>
       <div id="save-map" class="tool"><i class="glyphicon glyphicon-floppy-save"></i> <span id="save-text">Save</span></div>
       <div id="clear-layers" class="tool"><i class="glyphicon glyphicon-fire"></i> Clear </div>
       <!-- <div id="style-map" class="tool disabled"><i class="glyphicon glyphicon-pencil"></i> Styler</div> -->
       <div id="add-data" class="tool"><i class="glyphicon glyphicon-search"></i> Add</div>
+      <div id="new"><i class="glyphicon glyphicon-globe"></i> New</div>
     </div>
 
     <div id="map-region">
       <div id="map"></div>
       <div id="overlay-region">
+        <div id="basemaps">
+          <div class="change-basemap" id="gray"></div>
+          <div class="change-basemap" id="delorme"></div>
+        </div>
         <div id="search-container"></div>
       </div>
     </div>
 
     <div class="footer">
-      <p>With ♥ from me to you</p>
+      <p>With ♥ from the map gnomes</p>
       <div id="footer-urls">
         <span>Gist: </span><a id="gist-url" href="#" target="_blank"></a>
         <span>bl.ocks: </span><a id="blocks-url" href="#" target="_blank"></a>
