@@ -870,9 +870,12 @@
     //console.log('tmpl', tmpl);
     var options = {
       "indent":"auto",
-      "indent-spaces":2
+      "indent-spaces":2,
+      'quiet': 'yes',
+      'tidy-mark': 'no'
     }
     tmpl = tidy_html5(tmpl, options);
+    //console.log('tmpl', tmpl);
     return tmpl;
 
   };
