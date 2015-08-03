@@ -530,12 +530,12 @@
     var self = this;
     var obj = this._buildWebMapJson(); //build the webmap json 
     var qs = this.getQueryString();
-    this._onSave();
-
+    
     //if not in edit mode OR no layers, do not save!
     if ( !qs.edit || this.layers.length === 0 ) return;
     //end 
 
+    this._onSave();
     var gistId = qs.id || null;
     
     //create data object that gets sent to github 
@@ -843,7 +843,7 @@
         }\
       </style>\
       <body>\
-      <div id="map"><a id="mundi-link" href="http://benheb.github.io/mundi/?id='+id+'">View map in Mundi</a></div>\
+      <div id="map"><a id="mundi-link" href="http://benheb.github.io/mundi/?id='+id+'" target="_blank">View map in Mundi</a></div>\
       <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>\
       <script src="//code.jquery.com/jquery-migrate-1.2.1.min.js"></script>\
       <script src="http://js.arcgis.com/3.14/"></script>\
