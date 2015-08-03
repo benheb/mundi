@@ -1,0 +1,42 @@
+<!doctype html> <html class=no-js> <head> <meta charset=utf-8> <meta name=description> <meta name=viewport content="width=device-width, initial-scale=1"> <title>Map from WebMapJson</title> <link rel=apple-touch-icon href=apple-touch-icon.png> <link rel=stylesheet href=http://js.arcgis.com/3.14/esri/css/esri.css> </head> <body> <div id=map></div> <script src="http://js.arcgis.com/3.14/"></script> <script>
+
+      require([
+        "esri/map",
+        "esri/urlUtils",
+        "esri/arcgis/utils",
+        "esri/layers/FeatureLayer", 
+        "esri/renderers/SimpleRenderer", 
+        "esri/renderers/jsonUtils",
+        "dojo/domReady!"
+      ], function(
+        Map,
+        urlUtils, 
+        arcgisUtils,
+        FeatureLayer, 
+        SimpleRenderer,
+        jsonUtils
+      ) { 
+
+        //HACK! I want to use these elsewhere OUTSIDE of require, so saving them to App 
+        self.FeatureLayer = FeatureLayer;
+        self.SimpleRenderer = SimpleRenderer;
+        self.jsonUtils = jsonUtils;
+        //end hack 
+
+        //create the map
+        arcgisUtils.createMap(self.webmap, "map", {
+          mapOptions: {
+            minZoom: 2
+          }
+        }).then(function(response){
+          self.map = response.map;
+
+          self.map.on('extent-change', function() {
+            self._updateExtent();
+          });
+
+        });
+
+      });
+
+    </script> </body> </html> 

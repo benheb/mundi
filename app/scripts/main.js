@@ -17,17 +17,21 @@
 
     //HACKY AUTH STUFF!!!
     /*
+    *
+    *
+    *
+    *
     * GITHUB LOGIN LOGIC 
     *
+    *
     */
-    this.github = null;
-    this.gistUrl = 'https://gist.github.com/';
-    this.blocksUrl = 'http://bl.ocks.org/';
 
-    var token = localStorage.getItem('github');
-    var qs = this.getQueryString();
+    this.github = null;
+    var token = localStorage.getItem('github'); //for now saving token in localstorage, is this legit??? 
+    var qs = this.getQueryString(); //so we know what mode we're in 
 
     if ( token ) {
+      //we have a token, init github wrapper, and set header login 
       this.github = new Github({
         token: token,
         auth: "oauth"
@@ -38,24 +42,29 @@
         self._setHeader();
       });
     } else {
+      //no token
       if ( qs.code ) {
+        //we have a ?code returned from github Auth, now get an access_token 
         var code = qs.code;
         $.getJSON('https://whispering-stream-9425.herokuapp.com/authenticate/'+code, function(data) {
           
           console.log('Token CREATED: ', data);
-          localStorage.setItem('github', data.token); //save token 
+          localStorage.setItem('github', data.token); //save token to localstorage 
           
+          //set header info (have to do new request for user...)
           $.getJSON('https://api.github.com/user?access_token='+data.token, function(user) {
             $('#login').html('Hello, '+user.login).attr('href', '#');
             self.user = user.login;
             self._setHeader();
           });
 
+          //initialize github wrapper for saving etc down the road 
           self.github = new Github({
             token: data.token,
             auth: "oauth"
           });
 
+          //remove code from url, it looks gross 
           delete qs.code; 
           qs = self.setQueryString(qs);
           window.history.pushState('', '', '?' + qs);
@@ -64,7 +73,7 @@
       } else {
         //still create a github instance, but can't save 
         if ( qs.edit ) { 
-          delete qs.edit;
+          delete qs.edit; //they aren't logged in, don't let them edit! 
           qs = self.setQueryString(qs);
           window.history.pushState('', '', '?' + qs);
         }
@@ -79,6 +88,8 @@
 
 
     //set the stage!
+    this.gistUrl = 'https://gist.github.com/';
+    this.blocksUrl = 'http://bl.ocks.org/';
     this._setHeader();
     this.map = null;
     this.layers = [];
@@ -151,7 +162,7 @@
       var mapId = qs.mapId || this.guid; 
       
       if ( gistId && mapId ) {
-        //console.log('here', gistId, mapId);
+        
         //saved map! load it 
         gist = this.github.getGist( gistId );
         gist.read(function(err, gist) {
@@ -161,7 +172,7 @@
               json = JSON.parse(file.content);
             }
           });
-          console.log('json', json);
+          
           if ( json ) {
             self.webmap = json;
             self._layersFromWebMapJson();
@@ -190,10 +201,13 @@
 
 
 
+
   /*
   * Creates the actual map 
   * Requires this.webmap be defined
   * Also save some dojo hacky stuff for use elsewhere... heh 
+  *
+  *
   */ 
   App.prototype._initMap = function() {
     var self = this;
@@ -375,6 +389,11 @@
 
 
 
+  /*
+  * Change the map basemap 
+  * @param {string} id      basemap id; 
+  *
+  */
   App.prototype._changeBasemap = function(id) {
     var self = this;
 
@@ -392,9 +411,11 @@
         basemap.visibility = false;
       }
     });
-    
+      
+    //update gist/bl.ock with new visible basemap 
     this.save();
   }
+
 
 
 
@@ -407,7 +428,6 @@
   App.prototype._basemapsFromWebMapJson = function() {
     
     var self = this;
-    console.log('this.webmap.itemData', this.webmap.itemData);
     this.webmap.itemData.baseMap.baseMapLayers.forEach(function(l) {
       var basemap = {};
       basemap.opacity = l.opacity;
@@ -415,8 +435,6 @@
       basemap.url = l.url;
       self.basemapLayers.push(basemap);
     });
-
-    console.log('this.basemapLayers', this.basemapLayers);
 
   }
 
@@ -504,39 +522,34 @@
 
 
   /*
+  * 
   * Saves the webmap json
-  * Saves to localstorage 
   * Saves to github if it can! 
   *
   */ 
   App.prototype.save = function() {
     var self = this;
-    var obj = this._buildWebMapJson();
-
-
-    //get gist id from location.search
-    //get file id from location.search 
-    //TODO remove hash!
+    var obj = this._buildWebMapJson(); //build the webmap json 
     var qs = this.getQueryString();
+    this._onSave();
 
-    //if not in edit mode, do not save!
+    //if not in edit mode OR no layers, do not save!
     if ( !qs.edit || this.layers.length === 0 ) return;
+    //end 
 
     var gistId = qs.gistId || null;
     var mapId = qs.mapId || this.guid(); 
-
-    //ui diddy 
-    $('#save-text').html('Saving...');
     
-    //console.log('saving...', obj);
+    //create data object that gets sent to github 
     var data = {
       "description": this.snippet,
       "public": true,
       "files": {}
     }
 
+    //webmap json file 
     data.files[ mapId ] = {
-      "content": JSON.stringify(obj)
+      "content": JSON.stringify(obj, null, '\t')
     }
 
 
@@ -557,8 +570,8 @@
       });
       
     } else {
-      //just update the file! 
-      var gist = this.github.getGist(gistId);
+      //gist exists! just update the file! 
+      var gist = this.github.getGist( gistId );
       data.files['index.html'] = {
         "content": this._getTemplate( gistId )
       }
@@ -572,12 +585,6 @@
   
   }
 
-
-
-
-  App.prototype._onSaveComplete = function() {
-    $('#save-text').html('Save');
-  }
 
 
 
@@ -609,6 +616,15 @@
 
 
 
+
+  App.prototype._onSave = function() {
+    $('#save-text').html('Saving...');
+  }
+
+
+  App.prototype._onSaveComplete = function() {
+    $('#save-text').html('Save');
+  }
 
   /*
   * Create random GUID 
@@ -747,11 +763,15 @@
 
 
 
+
+  /*
+  * Crufty UI logic for what to show in header based on "state"
+  * 
+  *
+  */
   App.prototype._setHeader = function() {
     var qs = this.getQueryString();
     var token = localStorage.getItem('github');
-
-    console.log('qs.edit', qs.edit);
     
     if ( qs.edit === 'true' ) {
       $('.tool').show();
@@ -773,6 +793,12 @@
 
 
 
+
+  /*
+  * Footer Gist url 
+  * 
+  *
+  */ 
   App.prototype._updateGistUrl = function() {
     var self = this;
     var qs = this.getQueryString();
@@ -786,6 +812,12 @@
   }
 
 
+
+  /*
+  * Footer Bl.ocks url
+  * 
+  *
+  */ 
   App.prototype._updateBlocksUrl = function() {
     var self = this;
     var qs = this.getQueryString();
@@ -800,6 +832,13 @@
 
 
   App.prototype._getTemplate = function(id) {
+    $.ajax({
+      url: '/tmpl.html'
+    })
+    .done(function(html) {
+      //console.log('html', html);
+    });
+
     var tmpl = '<!DOCTYPE html>\
       <meta charset="utf-8">\
       <link rel="stylesheet" href="http://js.arcgis.com/3.14/esri/css/esri.css">\
@@ -837,6 +876,14 @@
       </script>\
       </body>';
 
+
+    //console.log('tmpl', tmpl);
+    var options = {
+      "indent":"auto",
+      "indent-spaces":2
+    }
+    tmpl = tidy_html5(tmpl, options);
+    console.log('tmpl', tmpl);
     return tmpl;
 
   };
