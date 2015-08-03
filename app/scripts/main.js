@@ -856,6 +856,13 @@
           position: absolute;\
           right: 5px;\
           z-index: 200;\
+          display: block;\
+          background: #C9D5DC;\
+          text-decoration: none;\
+          color: #4C4C4C;\
+          top: 5px;\
+          padding: 5px;\
+          border-radius: 2px;\
         }\
       </style>\
       <body>\
