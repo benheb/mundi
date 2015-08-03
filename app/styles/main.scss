@@ -1,6 +1,6 @@
 $icon-font-path: '../fonts/';
 
-$primary-color: #57616D;
+$primary-color: #676c7f;
 $second-color:#eaeaea;
 $header-color: #FFF;
 $third-color: rgba(219, 218, 214, 0.1);
@@ -189,6 +189,10 @@ body > #map-region {
       }
       #delorme {
         background: url(../images/mundi-delorme.jpg);
+        background-size: contain;
+      }
+      #dark {
+        background: url(../images/mundi-dark.jpg);
         background-size: contain;
       }
       .change-basemap {

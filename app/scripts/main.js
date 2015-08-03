@@ -110,15 +110,21 @@
       "baseMap": {
         "baseMapLayers": [
           {
+            "opacity": 0.5,
+            "visibility": true,
+            "url": "http://services.arcgisonline.com/arcgis/rest/services/Specialty/DeLorme_World_Base_Map/MapServer"
+          },
+          {
             "opacity": 0.8,
             "visibility": false,
             "url": "http://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Light_Gray_Base/MapServer"
           },
           {
-            "opacity": 0.5,
-            "visibility": true,
-            "url": "http://services.arcgisonline.com/arcgis/rest/services/Specialty/DeLorme_World_Base_Map/MapServer"
-          }],
+            "opacity": 1,
+            "visibility": false,
+            "url": "http://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Base/MapServer"
+          }
+          ],
         "title": "basemap"
       },
       "version": "1.0"
@@ -126,7 +132,8 @@
 
     this.basemapUrls = {
       'delorme': 'http://services.arcgisonline.com/arcgis/rest/services/Specialty/DeLorme_World_Base_Map/MapServer',
-      'gray': 'http://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Light_Gray_Base/MapServer'
+      'gray': 'http://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Light_Gray_Base/MapServer',
+      'dark': 'http://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Base/MapServer'
     }
 
     //get initial webmap 
@@ -396,12 +403,21 @@
   App.prototype._changeBasemap = function(id) {
     var self = this;
 
-    var basemapId = ( id === 'gray' ) ? 'base0' : 'base1';
-    var hide = ( basemapId === 'base0' ) ? 'base1' : 'base0';
-    var b = this.map.getLayer( basemapId );
-    var c = this.map.getLayer( hide );
-    b.setVisibility(true);
-    c.setVisibility();
+    this.map.getLayer( 'base0' ).setVisibility();
+    this.map.getLayer( 'base1' ).setVisibility();
+    this.map.getLayer( 'base2' ).setVisibility();
+
+    switch(id) {
+      case 'delorme': 
+        self.map.getLayer( 'base0' ).setVisibility(true);
+        break;
+      case 'gray': 
+        self.map.getLayer( 'base1' ).setVisibility(true);
+        break;
+      case 'dark': 
+        self.map.getLayer( 'base2' ).setVisibility(true);
+        break;
+    }
 
     this.basemapLayers.forEach(function(basemap) {
       if ( basemap.url === self.basemapUrls[ id ] )  {
