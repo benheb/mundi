@@ -100,35 +100,7 @@
     this.webmap = {};
 
     //create default webmap 
-    this.defaultWebMap = {};
-    this.defaultWebMap.item = {
-      "title": this.title,
-      "snippet": this.snippet,
-      "extent": this.extent
-    };
-    this.defaultWebMap.itemData = {
-      "baseMap": {
-        "baseMapLayers": [
-          {
-            "opacity": 0.5,
-            "visibility": true,
-            "url": "http://services.arcgisonline.com/arcgis/rest/services/Specialty/DeLorme_World_Base_Map/MapServer"
-          },
-          {
-            "opacity": 0.8,
-            "visibility": false,
-            "url": "http://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Light_Gray_Base/MapServer"
-          },
-          {
-            "opacity": 1,
-            "visibility": false,
-            "url": "http://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Base/MapServer"
-          }
-          ],
-        "title": "basemap"
-      },
-      "version": "1.0"
-    };
+    this._createDefaultWebmap();
 
     this.basemapUrls = {
       'delorme': 'http://services.arcgisonline.com/arcgis/rest/services/Specialty/DeLorme_World_Base_Map/MapServer',
@@ -434,52 +406,6 @@
 
 
 
-
-  /*
-  * build layers array from saved webmap json 
-  *
-  *
-  */
-  App.prototype._basemapsFromWebMapJson = function() {
-    
-    var self = this;
-    this.webmap.itemData.baseMap.baseMapLayers.forEach(function(l) {
-      var basemap = {};
-      basemap.opacity = l.opacity;
-      basemap.visibility = l.visibility;
-      basemap.url = l.url;
-      self.basemapLayers.push(basemap);
-    });
-
-  }
-
-
-
-
-  /*
-  * build layers array from saved webmap json 
-  *
-  *
-  */
-  App.prototype._layersFromWebMapJson = function() {
-    
-    var self = this;
-    this.webmap.itemData.operationalLayers.forEach(function(l) {
-      var layer = {};
-      layer.url = l.url;
-      layer.visibility = l.visibility;
-      layer.opacity = l.opacity;
-      layer.layerDefinition = l.layerDefinition;
-      layer.mode = l.mode;
-      layer.id = l.id;
-      self.layers.push(layer);
-    });
-
-    //console.log('hydrated layers: ', this.layers);
-  }
-
-
-
   // local copy of layers 
   App.prototype._updateLayers = function(service, renderer) {
     
@@ -502,38 +428,6 @@
   }
 
 
-  
-
-
-  /*
-  * Build the webmap json! 
-  * 
-  *
-  */
-  App.prototype._buildWebMapJson = function() {
-    
-    var json = {};
-
-    json.item = {
-      "title": this.title,
-      "snippet": this.snippet,
-      "extent": this.extent
-    };
-
-    json.itemData = {
-      "operationalLayers": this.layers,
-      "baseMap": {
-        "baseMapLayers": this.basemapLayers,
-        "title": "basemap"
-      },
-      "version": "1.0"
-    }
-
-    console.log('web map json: ', json);
-    return json;
-  }
-
-
 
 
   /*
@@ -544,7 +438,16 @@
   */ 
   App.prototype.save = function() {
     var self = this;
-    var obj = this._buildWebMapJson(); //build the webmap json 
+    var options = {};
+    options.title = this.title;
+    options.snippet = this.snippet;
+    options.extent = this.extent;
+    options.layers = this.layers;
+    options.basemapLayers = this.basemapLayers;
+
+    //build the webmap json to save 
+    var obj = this._buildWebMapJson(options);
+    
     var qs = this.getQueryString();
     
     //if not in edit mode OR no layers, do not save!
@@ -848,6 +751,7 @@
     var tmpl = '<!DOCTYPE html>\
       <meta charset="utf-8">\
       <link rel="stylesheet" href="http://js.arcgis.com/3.14/esri/css/esri.css">\
+      <title>Webmap created with Mundi</title>\
       <style>\
         #map {\
           height:500px;\
