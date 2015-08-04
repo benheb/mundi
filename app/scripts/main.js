@@ -26,9 +26,11 @@
       $.getJSON('https://api.github.com/user?access_token='+token, function(user) {
         $('#login').html('Hello, '+user.login).attr('href', '#');
         self.user = user.login;
-        self._setHeader();
+        self._setHeader(true);
+        self._isEditable(token, user.login);
       });
       this.state.logged_in = true;
+      
     } else {
       //no token
       if ( qs.code ) {
@@ -43,7 +45,7 @@
           $.getJSON('https://api.github.com/user?access_token='+data.token, function(user) {
             $('#login').html('Hello, '+user.login).attr('href', '#');
             self.user = user.login;
-            self._setHeader();
+            self._setHeader(true);
           });
 
           //initialize github wrapper for saving etc down the road 
@@ -86,7 +88,7 @@
     //set the stage!
     this.gistUrl = 'https://gist.github.com/';
     this.blocksUrl = 'http://bl.ocks.org/';
-    this._setHeader();
+    this._setHeader(true);
     this.map = null;
     this.layers = [];
     this.basemapLayers = [];
@@ -154,7 +156,7 @@
             self.webmap = self.defaultWebMap;
           }
           self._basemapsFromWebMapJson();
-
+          
           callback();
         });
       } else {
@@ -221,6 +223,8 @@
         }
       }).then(function(response){
         self.map = response.map;
+        self._updateExtent();
+          
         self.map.graphicsLayerIds.forEach(function(layer) {
           var layer = self.map.getLayer(layer);
           layer.setMinScale(0);
@@ -228,10 +232,31 @@
           layer.redraw();
           self.snippet = layer.name;
         });
+
         self.map.on('extent-change', function() {
           self._updateExtent();
         });
 
+        //if map initialized in edit mode && there is a graphics layer
+        //init malette with the first layer!
+        if ( self.state.editing && self.map.graphicsLayerIds.length ) {
+          var id = self.map.graphicsLayerIds[0];
+          var layer = self.map.getLayer(id);
+          
+          $.getJSON('http://opendata.arcgis.com/datasets/' + id + '.json', function(res) {
+            var fields = res.data.fields;
+            var name = res.data.name;
+
+            var options = {};
+            options.json = layer.renderer.toJson();
+            options.name = layer.name;
+            options.fields = fields;
+            options.type = layer.type;
+            options.layerId = layer.id;
+            self.initMalette(options);
+          });
+
+        }
       });
 
     });
@@ -251,18 +276,18 @@
     var self = this;
     var type;
 
-    if ( this.malette ) { 
-      this.malette.destroy(); 
-    }
-
+    //make a layer, add it to the map 
     var layer = new this.FeatureLayer(service, {
       mode: this.FeatureLayer.MODE_ONDEMAND,
       outFields: ['*']
     });
+    layer.id = id;
 
     this.map.addLayer(layer);
 
-    //add to layers list
+    //add to local layers list
+    //when we go to construct webmap.json on save, this is the layers list
+    //we use to create json 
     this.layers.push({
       url: service,
       visibility: true,
@@ -280,12 +305,13 @@
     });
 
     layer.on('load', function() {
+      console.log('layer loaded!', layer);
+
       layer.minScale = 0; 
       layer.maxScale = 0;
-
       self.snippet = layer.name;
 
-      console.log('layer loaded!', layer);
+      //"convert" types to send to malette; 
       switch(layer.geometryType) {
         case 'esriGeometryPoint': 
           type = 'point';
@@ -297,6 +323,7 @@
           type = 'point';
       }
       
+      //layers come with all sorts of projections, we have to set to mercator 
       var merc = self.isWebMercator(layer.spatialReference);
       if ( merc ) {
         self.map.setExtent(layer.fullExtent.expand(2), false);
@@ -311,6 +338,7 @@
           })
       }
 
+      //set default renderer on our newly added layer 
       var json = self.renderers[type];
       var rend = new self.SimpleRenderer(json);
       layer.setRenderer(rend);
@@ -319,20 +347,18 @@
       self._updateLayers(service, rend);
       self.save();
 
+      //here we get STATS from Open Data so we can make pretty maps 
       $.getJSON('http://opendata.arcgis.com/datasets/' + id + '.json', function(res) {
         var fields = res.data.fields;
         var name = res.data.name;
-        self.malette = new Malette('map', {
-          title: name,
-          style: json,
-          formatIn: 'esri-json',
-          formatOut: 'esri-json',
-          fields: fields,
-          type: type,
-          exportStyle: true
-        });
 
-        window.malette = self.malette; 
+        var options = {};
+        options.json = json;
+        options.name = name;
+        options.fields = fields;
+        options.type = type;
+        options.layerId = layer.id;
+        self.initMalette(options);
 
         if ( type === "polygon" ) {
           setTimeout(function() {
@@ -345,19 +371,57 @@
           },100);
         }
 
-        self.malette.on('style-change', function( style ){
-          console.log('exported style', style);
-
-          var rend = self.jsonUtils.fromJson(style);
-          layer.setRenderer(rend);
-          layer.redraw();
-
-          self._updateLayers(service, rend);
-          self.save();
-        });
       });
 
     });
+  }
+
+
+
+
+  /*
+  * Styler logical 
+  * 
+  *
+  */
+  App.prototype.initMalette = function(options) {
+    var self = this;
+
+    if ( this.malette ) { 
+      this.malette.destroy(); 
+    }
+
+    console.log('options', options);
+
+    this.malette = new Malette('map', {
+      title: options.name,
+      style: options.json,
+      formatIn: 'esri-json',
+      formatOut: 'esri-json',
+      fields: options.fields,
+      type: options.type,
+      exportStyle: true,
+      layerId: options.layerId
+    });
+
+    this.malette.on('style-change', function( style ){
+      console.log('exported style', style);
+      
+      var layer; 
+      if ( style.layerId ) {
+        layer = self.map.getLayer( style.layerId );
+      } else {
+        return;
+      }
+
+      var rend = self.jsonUtils.fromJson(style);
+      layer.setRenderer(rend);
+      layer.redraw();
+
+      self._updateLayers(layer.url, rend);
+      self.save();
+    });
+
   }
 
 
@@ -432,7 +496,7 @@
   * Saves to github if it can! 
   *
   */ 
-  App.prototype.save = function() {
+  App.prototype.save = function(force) {
     var self = this;
     var options = {};
     options.title = this.title;
@@ -447,7 +511,7 @@
     var qs = this.getQueryString();
     
     //if not in edit mode OR no layers, do not save!
-    if ( !this.state.logged_in || this.layers.length === 0 ) return;
+    if ( !this.state.logged_in || ( this.layers.length === 0 && !force ) ) return;
     //end 
 
     this._onSave();
@@ -516,11 +580,17 @@
       this.malette = null;
     }
 
-    this.map.graphicsLayerIds.forEach(function(layer) {
-      self.map.removeLayer(self.map.getLayer(layer));
+    var ids = [];
+    this.map.graphicsLayerIds.forEach(function(id) {
+      ids.push(id);
     });
+
+    ids.forEach(function(d) {
+      self.map.removeLayer(self.map.getLayer(d));
+    });
+
     this.layers = [];
-    this.save();
+    this.save(true);
   }
 
 
@@ -681,31 +751,64 @@
   * 
   *
   */
-  App.prototype._setHeader = function() {
+  App.prototype._setHeader = function(editable) {
     var qs = this.getQueryString();
     var token = localStorage.getItem('github');
     
-    if ( qs.edit && token ) {
-      this.state.editing = true;
-      this.state.logged_in = true; 
-    }
-    
-    if ( this.state.logged_in && this.state.editing ) {
-      $('.tool').show();
-    }
-
-    if ( !this.state.editing && token ) {
-      $('#new').hide();
-      $('#edit').show();
-    } else {
+    if ( !editable ) {
+      $('.tool').hide();
       $('#new').hide();
       $('#edit').hide();
+      if ( token ) {
+        $('#new').show();
+      }
+    } else {
+      if ( qs.edit && token ) {
+        this.state.editing = true;
+        this.state.logged_in = true; 
+      }
+      
+      if ( this.state.logged_in && this.state.editing ) {
+        $('.tool').show();
+      }
+
+      if ( !this.state.editing && token ) {
+        $('#new').hide();
+        $('#edit').show();
+      } else {
+        $('#new').hide();
+        $('#edit').hide();
+      }
+
+      if ( this.state.editing && token ) {
+        $('#new').show();
+      }
     }
 
-    if ( this.state.editing && token ) {
-      $('#new').show();
-    }
+  }
 
+
+
+
+  App.prototype._isEditable = function(token, user) {
+    var self = this;
+    var qs = this.getQueryString();
+
+    if ( qs.id && token ) {
+      var gist = this.github.getGist(qs.id);
+      gist.read(function(err, gist) {
+        if ( gist.owner.login !== user ) {
+          self.state.editable = false;
+          self.state.editing = false;
+          if ( qs.edit ) { 
+            delete qs.edit; //they aren't logged in, don't let them edit! 
+            qs = self.setQueryString(qs);
+            window.history.pushState('', '', '?' + qs);
+          }
+          self._setHeader(false);
+        }
+      });
+    }
   }
 
 
@@ -852,7 +955,7 @@
       } else {
         self.showMalette();
       }
-    })
+    });
 
     $('#map').on('drop', function(e) {
       var data = e.originalEvent.dataTransfer.getData("text");
@@ -868,7 +971,7 @@
       qs.edit = 'true';
       qs = self.setQueryString(qs);
       window.history.pushState('', '', '?' + qs);
-      self._setHeader();
+      self._setHeader(true);
       self.state.editing = true;
     });
 
