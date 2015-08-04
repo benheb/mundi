@@ -117,7 +117,7 @@
     var search = new OpenSearch('search-container', {});
 
     this.legend = new Legend('legend-container', {
-      editable: true,
+      editable: false,
       layers: []
     });
 
