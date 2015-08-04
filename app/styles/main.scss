@@ -179,6 +179,12 @@ body > #map-region {
     width:100%;
     bottom:0;
     pointer-events:none;
+    #legend-container {
+      width: 218px;
+      position: absolute;
+      bottom: 120px;
+      left: 13px;
+    }
     #basemaps {
       position: absolute;
       left: 14px;
@@ -197,6 +203,7 @@ body > #map-region {
         opacity: 0.7;
       }
       .change-basemap {
+        box-shadow: 0 1px 5px rgba(0,0,0,0.11);
         border: 2px solid #FFF;
         width: 65px;
         height: 65px;

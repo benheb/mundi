@@ -116,6 +116,15 @@
     //initialize the search module 
     var search = new OpenSearch('search-container', {});
 
+    this.legend = new Legend('legend-container', {
+      editable: true,
+      layers: []
+    });
+
+    this.legend.on('remove-layer', function(id) {
+      self.removeLayerFromMap(id);
+    });
+
   };
 
 
@@ -156,7 +165,7 @@
             self.webmap = self.defaultWebMap;
           }
           self._basemapsFromWebMapJson();
-          
+
           callback();
         });
       } else {
@@ -231,6 +240,11 @@
           layer.setMaxScale(0);
           layer.redraw();
           self.snippet = layer.name;
+          self.legend.addLayer({
+            'id': layer.id,
+            'name': layer.name,
+            'renderer': {}
+          });
         });
 
         self.map.on('extent-change', function() {
@@ -306,7 +320,7 @@
 
     layer.on('load', function() {
       console.log('layer loaded!', layer);
-
+      
       layer.minScale = 0; 
       layer.maxScale = 0;
       self.snippet = layer.name;
@@ -344,6 +358,12 @@
       layer.setRenderer(rend);
       layer.redraw();
 
+      self.legend.addLayer({
+        'id': layer.id,
+        'name': layer.name,
+        'renderer': {}
+      });
+
       self._updateLayers(service, rend);
       self.save();
 
@@ -376,6 +396,25 @@
     });
   }
 
+
+
+
+  App.prototype.removeLayerFromMap = function(id) {
+    var self = this;
+    if ( this.malette ) { 
+      this.malette.destroy(); 
+      this.malette = null;
+    }
+
+    this.layers.forEach(function(layer, i) {
+      if ( layer.id === id ) {
+        self.layers.splice(i, 1);
+      }
+    });
+
+    this.map.removeLayer(this.map.getLayer(id));
+    this.save(true);
+  }
 
 
 
@@ -762,7 +801,13 @@
       if ( token ) {
         $('#new').show();
       }
+      if ( this.legend ) {
+        this.legend.disableRemove();
+      }
     } else {
+      if ( this.legend ) {
+        this.legend.enableRemove();
+      }
       if ( qs.edit && token ) {
         this.state.editing = true;
         this.state.logged_in = true; 
