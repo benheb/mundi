@@ -4,28 +4,15 @@
 
   var App = function App( options ) {
     var self = this;
-
-    $( document ).ajaxStart(function() {
-      NProgress.start();
-    });
-
-    $( document ).ajaxStop(function() {
-      NProgress.done();
-    });
-
-
+    this.state = {};
+    this.state.logged_in = false;
+    this.state.editable = false;
+    this.state.editing = false; 
 
     //HACKY AUTH STUFF!!!
-    /*
-    *
-    *
-    *
-    *
-    * GITHUB LOGIN LOGIC 
-    *
-    *
-    */
-
+    /****************************************************************************
+    * THE LOGIN LOGIC
+    *****************************************************************************/
     this.github = null;
     var token = localStorage.getItem('github'); //for now saving token in localstorage, is this legit??? 
     var qs = this.getQueryString(); //so we know what mode we're in 
@@ -41,6 +28,7 @@
         self.user = user.login;
         self._setHeader();
       });
+      this.state.logged_in = true;
     } else {
       //no token
       if ( qs.code ) {
@@ -64,6 +52,8 @@
             auth: "oauth"
           });
 
+          self.state.logged_in = true;
+
           //remove code from url, it looks gross 
           delete qs.code; 
           qs = self.setQueryString(qs);
@@ -80,12 +70,18 @@
         self.github = new Github({});
       }
     }
-    /*
+    /****************************************************************************
     * END THE LOGIN LOGIC
-    *
-    */
+    *****************************************************************************/
 
 
+    $( document ).ajaxStart(function() {
+      NProgress.start();
+    });
+
+    $( document ).ajaxStop(function() {
+      NProgress.done();
+    });
 
     //set the stage!
     this.gistUrl = 'https://gist.github.com/';
@@ -451,7 +447,7 @@
     var qs = this.getQueryString();
     
     //if not in edit mode OR no layers, do not save!
-    if ( !qs.edit || this.layers.length === 0 ) return;
+    if ( !this.state.logged_in || this.layers.length === 0 ) return;
     //end 
 
     this._onSave();
@@ -689,11 +685,16 @@
     var qs = this.getQueryString();
     var token = localStorage.getItem('github');
     
-    if ( qs.edit === 'true' ) {
+    if ( qs.edit && token ) {
+      this.state.editing = true;
+      this.state.logged_in = true; 
+    }
+    
+    if ( this.state.logged_in && this.state.editing ) {
       $('.tool').show();
     }
 
-    if ( !qs.edit && token ) {
+    if ( !this.state.editing && token ) {
       $('#new').hide();
       $('#edit').show();
     } else {
@@ -701,7 +702,7 @@
       $('#edit').hide();
     }
 
-    if ( qs.edit && token ) {
+    if ( this.state.editing && token ) {
       $('#new').show();
     }
 
@@ -868,6 +869,7 @@
       qs = self.setQueryString(qs);
       window.history.pushState('', '', '?' + qs);
       self._setHeader();
+      self.state.editing = true;
     });
 
     $('#new').on('click', function() {
