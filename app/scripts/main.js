@@ -998,7 +998,7 @@
               legend.addLayer({\
                 "id": layer.id,\
                 "name": layer.name,\
-                "renderer": {}\
+                "renderer": layer.renderer.toJson()\
               });\
             });\
           });\
