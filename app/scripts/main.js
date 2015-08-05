@@ -125,6 +125,23 @@
       self.removeLayerFromMap(id);
     });
 
+    this.legend.on('edit-layer', function(id) {
+      var layer = self.map.getLayer(id);
+      
+      $.getJSON('http://opendata.arcgis.com/datasets/' + id + '.json', function(res) {
+        var fields = res.data.fields;
+        var name = res.data.name;
+
+        var options = {};
+        options.json = layer.renderer.toJson();
+        options.name = layer.name;
+        options.fields = fields;
+        options.type = layer.type;
+        options.layerId = layer.id;
+        self.initMalette(options);
+      });
+    });
+
   };
 
 
@@ -802,11 +819,11 @@
         $('#new').show();
       }
       if ( this.legend ) {
-        this.legend.disableRemove();
+        this.legend.disableEdit();
       }
     } else {
       if ( this.legend ) {
-        this.legend.enableRemove();
+        this.legend.enableEdit();
       }
       if ( qs.edit && token ) {
         this.state.editing = true;
