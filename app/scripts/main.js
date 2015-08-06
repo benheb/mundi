@@ -136,7 +136,7 @@
         options.json = layer.renderer.toJson();
         options.name = layer.name;
         options.fields = fields;
-        options.type = layer.type;
+        options.type = self.getType(layer);
         options.layerId = layer.id;
         self.initMalette(options);
       });
@@ -265,11 +265,6 @@
           layer.setMaxScale(0);
           layer.redraw();
           self.snippet = layer.name;
-          self.legend.addLayer({
-            'id': layer.id,
-            'name': layer.name,
-            'renderer': layer.renderer.toJson()
-          });
         });
 
         self.map.on('extent-change', function() {
@@ -290,9 +285,10 @@
             options.json = layer.renderer.toJson();
             options.name = layer.name;
             options.fields = fields;
-            options.type = layer.type;
+            options.type = self.getType(layer);
             options.layerId = layer.id;
             self.initMalette(options);
+            self._maletteTriggers(self.getType(layer));
           });
 
         }
@@ -350,17 +346,7 @@
       layer.maxScale = 0;
       self.snippet = layer.name;
 
-      //"convert" types to send to malette; 
-      switch(layer.geometryType) {
-        case 'esriGeometryPoint': 
-          type = 'point';
-          break;
-        case 'esriGeometryPolygon': 
-          type = 'polygon';
-          break;
-        default: 
-          type = 'point';
-      }
+      type = self.getType(layer);
       
       //layers come with all sorts of projections, we have to set to mercator 
       var merc = self.isWebMercator(layer.spatialReference);
@@ -405,16 +391,7 @@
         options.layerId = layer.id;
         self.initMalette(options);
 
-        if ( type === "polygon" ) {
-          setTimeout(function() {
-            $('#malette-theme-color-option').trigger('click');  
-          },100);
-        } else if ( type === 'point' ) {
-          setTimeout(function() {
-            $('#malette-size-tab').trigger('click');
-            $('#malette-graduated-size-option').trigger('click');
-          },100);
-        }
+        self._maletteTriggers(type);
 
       });
 
@@ -455,7 +432,7 @@
       this.malette.destroy(); 
     }
 
-    console.log('options', options);
+    //console.log('options', options);
 
     this.malette = new Malette('map', {
       title: options.name,
@@ -487,6 +464,22 @@
       self.save();
     });
 
+  }
+
+
+
+
+  App.prototype._maletteTriggers = function(type) {
+   if ( type === "polygon" ) {
+      setTimeout(function() {
+        $('#malette-theme-color-option').trigger('click');  
+      },100);
+    } else if ( type === 'point' ) {
+      setTimeout(function() {
+        $('#malette-size-tab').trigger('click');
+        $('#malette-graduated-size-option').trigger('click');
+      },100);
+    }
   }
 
 
@@ -719,6 +712,25 @@
     }
 
     return obj;
+  }
+
+
+
+  App.prototype.getType = function(layer) {
+    var type;
+    //"convert" types to send to malette; 
+    switch(layer.geometryType) {
+      case 'esriGeometryPoint': 
+        type = 'point';
+        break;
+      case 'esriGeometryPolygon': 
+        type = 'polygon';
+        break;
+      default: 
+        type = 'point';
+    }
+
+    return type; 
   }
 
 
