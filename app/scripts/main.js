@@ -265,6 +265,11 @@
           layer.setMaxScale(0);
           layer.redraw();
           self.snippet = layer.name;
+          self.legend.addLayer({
+            "id": layer.id,
+            "name": layer.name,
+            "renderer": layer.renderer.toJson()
+          });
         });
 
         self.map.on('extent-change', function() {
@@ -427,7 +432,7 @@
   */
   App.prototype.initMalette = function(options) {
     var self = this;
-
+    
     if ( this.malette ) { 
       this.malette.destroy(); 
     }
@@ -549,9 +554,7 @@
 
 
   App.prototype._updateLegend = function(layer, style) {
-    console.log('update legend');
     var id = layer.id;
-    console.log('style', style);
     this.legend.updateLayer({
       'id': layer.id,
       'name': layer.name,
@@ -569,6 +572,12 @@
   *
   */ 
   App.prototype.save = function(force) {
+
+    //if not in edit mode OR no layers, do not save!
+    if ( !this.state.editing ) { return; }
+    if ( !this.state.logged_in || ( this.layers.length === 0 && !force ) ) { return; }
+    //end 
+
     var self = this;
     var options = {};
     options.title = this.title;
@@ -578,13 +587,11 @@
     options.basemapLayers = this.basemapLayers;
 
     //build the webmap json to save 
+    this._assureJson(); //OMG!!!
+
     var obj = this._buildWebMapJson(options);
-    
     var qs = this.getQueryString();
     
-    //if not in edit mode OR no layers, do not save!
-    if ( !this.state.logged_in || ( this.layers.length === 0 && !force ) ) return;
-    //end 
 
     this._onSave();
     var gistId = qs.id || null;
@@ -601,12 +608,10 @@
       "content": JSON.stringify(obj, null, '\t')
     }
 
-
     if ( !gistId ) {
       //create NEW gist 
       var gist = this.github.getGist();
       gist.create(data, function(err, g) {
-        console.log('gist', g);
         
         qs.id = g.id;
         qs = self.setQueryString(qs);

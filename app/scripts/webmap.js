@@ -47,7 +47,7 @@
   *
   */
   App.prototype._buildWebMapJson = function(options) {
-    
+  
     var json = {};
 
     json.item = {
@@ -66,6 +66,7 @@
     }
 
     console.log('web map json: ', json);
+
     return json;
   }
 
@@ -112,5 +113,14 @@
       self.layers.push(layer);
     });
 
-    //console.log('hydrated layers: ', this.layers);
+  }
+
+
+
+  App.prototype._assureJson = function() {
+    var self = this;
+    this.layers.forEach(function(layer, i) {
+      var rend = self.jsonUtils.fromJson( self.layers[i].layerDefinition.drawingInfo.renderer);
+      self.layers[i].layerDefinition.drawingInfo.renderer = rend.toJson();
+    });
   }
