@@ -125,6 +125,10 @@
       self.removeLayerFromMap(id);
     });
 
+    this.legend.on('reorder-layers', function(obj) {
+      self._reorderLayers(obj);
+    });
+
     this.legend.on('edit-layer', function(id) {
       var layer = self.map.getLayer(id);
       
@@ -293,7 +297,7 @@
             options.type = self.getType(layer);
             options.layerId = layer.id;
             self.initMalette(options);
-            self._maletteTriggers(self.getType(layer));
+            //self._maletteTriggers(self.getType(layer));
           });
 
         }
@@ -560,6 +564,31 @@
       'name': layer.name,
       'renderer': layer.renderer.toJson()
     });
+  }
+
+
+
+
+  App.prototype._reorderLayers = function(obj) {
+    var self = this;
+
+    this.map.reorderLayer(this.map.getLayer(obj.id), obj.index);
+
+
+    function swapElement(array, indexA, indexB) {
+      var tmp = array[indexA];
+      array[indexA] = array[indexB];
+      array[indexB] = tmp;
+    }
+
+    var old;
+    this.layers.forEach(function(layer, i) {
+      if ( layer.id === obj.id ) {
+        swapElement(self.layers, obj.index, i);
+      }
+    });
+
+    this.save();
   }
 
 
@@ -989,6 +1018,7 @@
       </div>\
       <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>\
       <script src="//code.jquery.com/jquery-migrate-1.2.1.min.js"></script>\
+      <script src="https://rawgit.com/benheb/legend/master/sortable.js"></script>\
       <script src="http://js.arcgis.com/3.14/"></script>\
       <script src="https://rawgit.com/benheb/legend/master/legend.js"></script>\
       <script>\
