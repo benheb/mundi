@@ -982,6 +982,38 @@
   }
 
 
+
+
+  App.prototype._createCanvas = function() {
+    
+    $('#malette').hide();
+    $('#legend-container').css({'bottom': '40px'});
+
+    $('#image-out-container').show();
+    document.getElementById('image-out').innerHTML = '';
+
+    html2canvas(document.getElementById('map'), {
+      onrendered: function(canvas) {
+        canvas.id = 'image-out-canvas';
+        document.getElementById('image-out').appendChild(canvas);
+      },
+      //allowTaint: true,
+      useCORS: true,
+      letterRendering: true
+    });
+
+  }
+
+
+
+  App.prototype._downloadImage = function(link, id, file) {
+    console.log('id', id);
+    link.href = document.getElementById(id).toDataURL();
+    link.download = file;
+  }
+
+
+
   App.prototype._getTemplate = function(id) {
     var tmpl = '<!DOCTYPE html>\
       <meta charset="utf-8">\
@@ -1095,6 +1127,19 @@
 
     $('#map').on('dragover', function(e) {
       e.preventDefault();
+    });
+
+    $('#camera').on('click', function(e) {
+      self._createCanvas(e);
+    });
+
+    $('#download').on('click', function(e) {
+      self._downloadImage(this, 'image-out-canvas', 'mundi-export.png');
+    });
+
+    $('#map').on('click', function(e) {
+      $('#image-out-container').fadeOut();
+      $('#legend-container').css({'bottom': '120px'});
     });
 
     if ( this.layers.length ) {

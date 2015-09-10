@@ -110,6 +110,23 @@ body > #map-region {
     float: left;
     margin-left:13px;
   }
+  #camera {
+    float: right;
+    margin: 5px;
+    width: 40px;
+    text-align: center;
+    margin-right: 0px;
+    font-size: 0.8em;
+    border: 1px solid #CCC;
+    padding: 4px;
+    border-radius: 3px;
+    padding-top: 5px;
+    background:#f3f3f3;
+    &:hover {
+      cursor:pointer;
+      background:#EAEAEA;
+    }
+  }
 }
 
 
@@ -179,12 +196,6 @@ body > #map-region {
     width:100%;
     bottom:0;
     pointer-events:none;
-    #legend-container {
-      width: 300px;
-      position: absolute;
-      bottom: 120px;
-      left: 13px;
-    }
     #basemaps {
       position: absolute;
       left: 14px;
@@ -229,9 +240,37 @@ body > #map-region {
   }
 }
 
+#image-out-container {
+  display: none;
+  z-index: 1000;
+  position: absolute;
+  background-color: #FFF;
+  width: 500px;
+  overflow: hidden;
+  height: auto;
+  border: 10px solid #FFF;
+  right: 5px;
+  bottom: 34px;
+  canvas {
+    width:500px;
+  }
+  #download {
+    text-align:right;
+    display: block;
+    margin-bottom:5px;
+    cursor: pointer;
+  }
+}
+
 #map {
   width:100%;
   height:100%;
+  #legend-container {
+    width: 300px;
+    position: absolute;
+    bottom: 120px;
+    left: 15px;
+  }
 }
 
 #map img {

@@ -47,6 +47,7 @@
     </nav>
 
     <div id="toolbar">
+      <div id="camera"><i class="glyphicon glyphicon-camera"></i></div>
       <div id="edit"><i class="glyphicon glyphicon-edit"></i> Edit</div>
       <div id="save-map" class="tool"><i class="glyphicon glyphicon-floppy-save"></i> <span id="save-text">Save</span></div>
       <div id="clear-layers" class="tool"><i class="glyphicon glyphicon-fire"></i> Clear </div>
@@ -56,15 +57,20 @@
     </div>
 
     <div id="map-region">
-      <div id="map"></div>
+      <div id="map">
+        <div id="legend-container"></div>
+      </div>
       <div id="overlay-region">
         <div id="basemaps">
           <div class="change-basemap" id="dark"></div>
           <div class="change-basemap" id="delorme"></div>
           <div class="change-basemap" id="gray"></div>
         </div>
-        <div id="legend-container"></div>
         <div id="search-container"></div>
+      </div>
+      <div id="image-out-container">
+        <a id="download">Download Image <i class="glyphicon glyphicon-download"></i></a>
+        <div id="image-out"></div>
       </div>
     </div>
 
@@ -119,6 +125,8 @@
     <script src='http://lovasoa.github.io/tidy-html5/tidy.js'></script>
 
     <!-- build:js scripts/main.js -->
+    <script src="scripts/html2canvas.js"></script>
+    <script src="scripts/html2canvas.svg.js"></script>
     <script src="scripts/github.js"></script>
     <script src="scripts/main.js"></script>
     <script src="scripts/webmap.js"></script>
