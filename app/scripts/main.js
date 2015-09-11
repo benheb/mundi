@@ -9,6 +9,8 @@
     this.state.editable = false;
     this.state.editing = false; 
 
+
+
     //HACKY AUTH STUFF!!!
     /****************************************************************************
     * THE LOGIN LOGIC
@@ -77,6 +79,8 @@
     *****************************************************************************/
 
 
+
+    //loaders on ajax requests 
     $( document ).ajaxStart(function() {
       NProgress.start();
     });
@@ -84,6 +88,8 @@
     $( document ).ajaxStop(function() {
       NProgress.done();
     });
+    //end loaders 
+
 
     //set the stage!
     this.gistUrl = 'https://gist.github.com/';
@@ -116,43 +122,7 @@
     //initialize the search module 
     var search = new OpenSearch('search-container', {});
 
-    this.legend = new Legend('legend-container', {
-      editable: false,
-      layers: []
-    });
-
-    this.legend.on('remove-layer', function(id) {
-      self.removeLayerFromMap(id);
-    });
-
-    this.legend.on('reorder-layers', function(obj) {
-      self._reorderLayers(obj);
-    });
-
-    this.legend.on('edit-layer', function(id) {
-      var layer = self.map.getLayer(id);
-      
-      $.getJSON('http://opendata.arcgis.com/datasets/' + id + '.json', function(res) {
-        var fields = res.data.fields;
-        var name = res.data.name;
-
-        var options = {};
-        options.json = layer.renderer.toJson();
-        options.name = layer.name;
-        options.fields = fields;
-        options.type = self.getType(layer);
-        options.layerId = layer.id;
-        self.initMalette(options);
-      });
-    });
-
-
-    this.legend.on('edit-layer-end', function(id) {
-      if ( self.malette ) { 
-        self.malette.destroy(); 
-        self.malette = null;
-      }
-    });
+    this.initLegend();
 
   };
 
@@ -431,7 +401,7 @@
 
   /*
   * Styler logical 
-  * 
+  * @param {Object} options    layer options to be passed to Malette 
   *
   */
   App.prototype.initMalette = function(options) {
@@ -478,6 +448,61 @@
 
 
 
+  /*
+  * Initialize the legend module 
+  * 
+  *
+  *
+  */
+  App.prototype.initLegend = function() {
+    //initialize the legend module 
+    this.legend = new Legend('legend-container', {
+      editable: false,
+      layers: []
+    });
+
+    this.legend.on('remove-layer', function(id) {
+      self.removeLayerFromMap(id);
+    });
+
+    this.legend.on('reorder-layers', function(obj) {
+      self._reorderLayers(obj);
+    });
+
+    this.legend.on('edit-layer', function(id) {
+      var layer = self.map.getLayer(id);
+      
+      $.getJSON('http://opendata.arcgis.com/datasets/' + id + '.json', function(res) {
+        var fields = res.data.fields;
+        var name = res.data.name;
+
+        var options = {};
+        options.json = layer.renderer.toJson();
+        options.name = layer.name;
+        options.fields = fields;
+        options.type = self.getType(layer);
+        options.layerId = layer.id;
+        self.initMalette(options);
+      });
+    });
+
+
+    this.legend.on('edit-layer-end', function(id) {
+      if ( self.malette ) { 
+        self.malette.destroy(); 
+        self.malette = null;
+      }
+    });
+  }
+
+
+
+
+  /*
+  * Kind of hacky but yea 
+  * 
+  *
+  */ 
   App.prototype._maletteTriggers = function(type) {
    if ( type === "polygon" ) {
       setTimeout(function() {
@@ -533,21 +558,27 @@
 
 
 
-  // local copy of layers 
+  /*
+  * Creates a local copy of layers in map (app.layes)
+  * @param {String} service   service url 
+  * @param {Object} renderer  renderer object for layer 
+  *
+  */
   App.prototype._updateLayers = function(service, renderer) {
-    
-    //console.log('UPDATE LAYERS: service', service, 'renderer', renderer);
     this.layers.forEach(function( layer ) {
       if ( layer.url === service ) {
         layer.layerDefinition.drawingInfo.renderer = renderer.toJson();
       }
     });
-
   }
 
 
 
-  //local copy of current extent 
+  /*
+  * Updates app level extent 
+  * Triggers save, each time extent is changed 
+  *
+  */
   App.prototype._updateExtent = function() {
     var extent = this.map.geographicExtent;
     this.extent = [[extent.xmin, extent.ymin],[extent.xmax, extent.ymax]];
@@ -556,7 +587,11 @@
 
 
 
-
+  /*
+  * Updates layer info in the legend 
+  * 
+  *
+  */
   App.prototype._updateLegend = function(layer, style) {
     var id = layer.id;
     this.legend.updateLayer({
@@ -568,12 +603,15 @@
 
 
 
-
+  /*
+  * Reorders layers in map triggered by drag + drop in legend 
+  * Triggers save on reorder 
+  * 
+  */
   App.prototype._reorderLayers = function(obj) {
     var self = this;
 
     this.map.reorderLayer(this.map.getLayer(obj.id), obj.index);
-
 
     function swapElement(array, indexA, indexB) {
       var tmp = array[indexA];
@@ -714,23 +752,10 @@
     $('#save-text').html('Save');
   }
 
-  /*
-  * Create random GUID 
-  *
-  *
-  */
-  App.prototype.guid = function () {
-    return Math.random().toString(36).substr(2, 9);
-  }
-
-
-
 
   App.prototype.setQueryString = function(qs) {
     return $.param(qs);
   }
-
-
 
   App.prototype.getQueryString = function() {
     var pairs = window.location.search.substring(1).split("&"),
@@ -748,8 +773,6 @@
     return obj;
   }
 
-
-
   App.prototype.getType = function(layer) {
     var type;
     //"convert" types to send to malette; 
@@ -763,7 +786,6 @@
       default: 
         type = 'point';
     }
-
     return type; 
   }
 
@@ -1007,7 +1029,6 @@
 
 
   App.prototype._downloadImage = function(link, id, file) {
-    console.log('id', id);
     link.href = document.getElementById(id).toDataURL();
     link.download = file;
   }
@@ -1159,8 +1180,10 @@
       var urls = data.split(',');
       var service = urls[0];
       var id = urls[1];
-      $('#search-container').hide();
-      self.addLayerToMap(service, id);
+      if ( id ) {
+        $('#search-container').hide();
+        self.addLayerToMap(service, id);
+      }
     });
 
     $('#edit').on('click', function() {
