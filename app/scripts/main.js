@@ -122,6 +122,16 @@
     //initialize the search module 
     var search = new OpenSearch('search-container', {});
 
+    search.on('search-result-selected', function(data) {
+      var urls = data.split(',');
+      var service = urls[0];
+      var id = urls[1];
+      if ( id ) {
+        $('#search-container').hide();
+        self.addLayerToMap(service, id);
+      }
+    });
+
     this.initLegend();
 
   };
@@ -250,27 +260,6 @@
           self._updateExtent();
         });
 
-        //if map initialized in edit mode && there is a graphics layer
-        //init malette with the first layer!
-        if ( self.state.editing && self.map.graphicsLayerIds.length ) {
-          var id = self.map.graphicsLayerIds[0];
-          var layer = self.map.getLayer(id);
-          
-          $.getJSON('http://opendata.arcgis.com/datasets/' + id + '.json', function(res) {
-            var fields = res.data.fields;
-            var name = res.data.name;
-
-            var options = {};
-            options.json = layer.renderer.toJson();
-            options.name = layer.name;
-            options.fields = fields;
-            options.type = self.getType(layer);
-            options.layerId = layer.id;
-            self.initMalette(options);
-            //self._maletteTriggers(self.getType(layer));
-          });
-
-        }
       });
 
     });
@@ -353,7 +342,7 @@
         'name': layer.name,
         'renderer': json
       });
-
+      
       self._updateLayers(service, rend);
       self.save();
 
@@ -368,9 +357,10 @@
         options.fields = fields;
         options.type = type;
         options.layerId = layer.id;
+        console.log('options', options);
         self.initMalette(options);
 
-        self._maletteTriggers(type);
+        //self._maletteTriggers(type);
 
       });
 
@@ -411,8 +401,6 @@
       this.malette.destroy(); 
     }
 
-    //console.log('options', options);
-
     this.malette = new Malette('map', {
       title: options.name,
       style: options.json,
@@ -425,7 +413,6 @@
     });
 
     this.malette.on('style-change', function( style ){
-      console.log('exported style', style);
       
       var layer; 
       if ( style.layerId ) {
@@ -455,6 +442,7 @@
   *
   */
   App.prototype.initLegend = function() {
+    var self = this;
     //initialize the legend module 
     this.legend = new Legend('legend-container', {
       editable: false,
@@ -777,6 +765,9 @@
     var type;
     //"convert" types to send to malette; 
     switch(layer.geometryType) {
+      case 'esriGeometryPolyline': 
+        type = 'line';
+        break;
       case 'esriGeometryPoint': 
         type = 'point';
         break;
@@ -844,55 +835,6 @@
 
 
 
-  /* default rendereres */
-  App.prototype._setDefaultRenderers = function() {
-    this.renderers = {
-      'point' : {
-        "type": "simple",
-        "label": "",
-        "description": "",
-        "symbol": {
-          "color": [43,140,190,200],
-          "size": 6,
-          "angle": 0,
-          "xoffset": 0,
-          "yoffset": 0,
-          "type": "esriSMS",
-          "style": "esriSMSCircle",
-          "outline": {
-            "color": [255,255,255,255],
-            "width": 1.3,
-            "type": "esriSLS",
-            "style": "esriSLSSolid"
-          }
-        }
-      },
-      'polygon': {
-        "type": "simple",
-        "label": "",
-        "description": "",
-        "symbol": {
-          "color": [43,140,190,200],
-          "size": 6,
-          "angle": 0,
-          "xoffset": 0,
-          "yoffset": 0,
-          'style': "esriSFSSolid",
-          'type': "esriSFS",
-          "outline": {
-            "color": [255,255,255,255],
-            "width": 0.5,
-            "type": "esriSLS",
-            "style": "esriSLSSolid"
-          }
-        }
-      }
-    };
-  }
-
-
-
-
   /*
   * Crufty UI logic for what to show in header based on "state"
   * 
@@ -942,7 +884,11 @@
 
 
 
-
+  /*
+  * Can user edit this map? 
+  *
+  *
+  */
   App.prototype._isEditable = function(token, user) {
     var self = this;
     var qs = this.getQueryString();
@@ -1005,7 +951,11 @@
 
 
 
-
+  /*
+  * Creates canvas of map for downloading as PNG
+  * 
+  *
+  */  
   App.prototype._createCanvas = function() {
     
     $('#malette').hide();
@@ -1028,6 +978,10 @@
 
 
 
+  /*
+  * Creates and downloads .png of map!!
+  *
+  */
   App.prototype._downloadImage = function(link, id, file) {
     link.href = document.getElementById(id).toDataURL();
     link.download = file;
@@ -1035,94 +989,7 @@
 
 
 
-  App.prototype._getTemplate = function(id) {
-    var tmpl = '<!DOCTYPE html>\
-      <meta charset="utf-8">\
-      <link rel="stylesheet" href="http://js.arcgis.com/3.14/esri/css/esri.css">\
-      <link rel="stylesheet" type="text/css" href="https://rawgit.com/benheb/legend/master/legend.css">\
-      <title>Webmap created with Mundi</title>\
-      <style>\
-        #map {\
-          height:500px;\
-        }\
-        #mundi-link {\
-          position: absolute;\
-          right: 5px;\
-          z-index: 200;\
-          display: block;\
-          background: #FFF;\
-          text-decoration: none;\
-          color: #4C4C4C;\
-          top: 5px;\
-          padding: 5px;\
-          border-radius: 2px;\
-        }\
-        #legend-container {\
-          width: 218px;\
-          position: absolute;\
-          bottom: 20px;\
-          left: 13px;\
-        }\
-      </style>\
-      <body>\
-      <div id="map">\
-        <a id="mundi-link" href="http://benheb.github.io/mundi/?id='+id+'" target="_blank">View map in Mundi</a>\
-        <div id="legend-container"></div>\
-      </div>\
-      <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>\
-      <script src="//code.jquery.com/jquery-migrate-1.2.1.min.js"></script>\
-      <script src="https://rawgit.com/benheb/legend/master/sortable.js"></script>\
-      <script src="http://js.arcgis.com/3.14/"></script>\
-      <script src="https://rawgit.com/benheb/legend/master/legend.js"></script>\
-      <script>\
-      require(["esri/map","esri/urlUtils","esri/arcgis/utils","esri/layers/FeatureLayer","esri/renderers/SimpleRenderer","esri/renderers/jsonUtils","dojo/domReady!"],\
-        function(Map,urlUtils,arcgisUtils,FeatureLayer,SimpleRenderer,jsonUtils) {\
-        var legend = new Legend("legend-container", {\
-          editable: false,\
-          layers: []\
-        });\
-        $.getJSON("https://api.github.com/gists/'+id+'", function(data) {\
-          var webmap;\
-          for (var file in data.files ) {\
-            if ( file !== "index.html" ) {\
-              webmap = JSON.parse(data.files[file].content);\
-            }\
-          };\
-          arcgisUtils.createMap(webmap, "map").then(function(response){\
-            var map = response.map;\
-            map.graphicsLayerIds.forEach(function(layer) {\
-              var layer = map.getLayer(layer);\
-              layer.setMinScale(0);\
-              layer.setMaxScale(0);\
-              layer.redraw();\
-              legend.addLayer({\
-                "id": layer.id,\
-                "name": layer.name,\
-                "renderer": layer.renderer.toJson()\
-              });\
-            });\
-          });\
-        });\
-      });\
-      </script>\
-      </body>';
-
-
-    //console.log('tmpl', tmpl);
-    var options = {
-      "indent":"auto",
-      "indent-spaces":2,
-      'quiet': 'yes',
-      'tidy-mark': 'no'
-    }
-    tmpl = tidy_html5(tmpl, options);
-    //console.log('tmpl', tmpl);
-    return tmpl;
-
-  };
-
-
-
+  
   /******* WIRE EVENTS *******/ 
 
   App.prototype._wire = function() {
